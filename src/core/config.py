@@ -1,9 +1,6 @@
 import os
-import logging
 from dotenv import load_dotenv, find_dotenv
 from threading import Lock
-
-logger = logging.getLogger(__name__)
 
 class _Config:
     """
@@ -37,14 +34,6 @@ class _Config:
         self.GRAPH_APP_AUTHORITY_URL = os.getenv("GRAPH_APP_AUTHORITY_URL", "https://login.microsoftonline.com")
         self.GRAPH_APP_SCOPES = os.getenv("GRAPH_APP_SCOPES", "Files.ReadWrite offline_access")
         self.GRAPH_APP_REDIRECT_URI = os.getenv("GRAPH_APP_REDIRECT_URI", "http://localhost:8000/callback")
-
-        # Optional app config
-        self.APP_ENV = os.getenv("APP_ENV", "dev")
-        self.LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-        self.DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
-
-        # Log what was loaded (without exposing secrets)
-        logger.info(f"Config loaded: APP_ENV={self.APP_ENV}, DEBUG={self.DEBUG}, GRAPH_TENANT={self.GRAPH_APP_TENANT}, KEY_VAULT_URL={'✓ Set' if self.KEY_VAULT_URL else '✗ Missing'}")
 
     # Derived OAuth URLs
     @property
