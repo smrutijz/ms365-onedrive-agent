@@ -1,0 +1,9 @@
+requests
+python-dotenv
+uvicorn
+fastapi
+pydantic-settings
+pydantic
+pytest
+azure-identity
+azure-keyvault-secrets
