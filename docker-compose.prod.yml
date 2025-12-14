@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   sharepoint-agent:
-    image: docker.io/${DOCKERHUB_USERNAME}/ms365-onedrive-agent:latest
+    image: docker.io/smrutijz/ms365-onedrive-agent:latest
     ports:
       - "8000:8000"
     env_file:
