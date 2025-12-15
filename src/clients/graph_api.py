@@ -15,6 +15,21 @@ class GraphClient:
             headers=self.headers
         ).json()
 
+    # Drive ID
+    def get_drive_id(self):
+        r = requests.get(f"{self.base_url}/me/drive", headers=self.headers)
+        r.raise_for_status()
+        return r.json()["id"]
+
+    # Folder ID by path
+    def get_folder_id_by_path(self, path: str):
+        r = requests.get(
+            f"{self.base_url}/me/drive/root:{path}",
+            headers=self.headers
+        )
+        r.raise_for_status()
+        return r.json()["id"]
+    
     # Folder contents
     def list_folder(self, folder_id: str):
         return requests.get(
@@ -28,6 +43,16 @@ class GraphClient:
             f"{self.base_url}/me/drive/root/search(q='{query}')",
             headers=self.headers
         ).json()
+    
+    # Download file
+    def download_file(self, file_id: str) -> bytes:
+        r = requests.get(
+            f"{self.base_url}/me/drive/items/{file_id}/content",
+            headers=self.headers,
+            allow_redirects=True
+            )
+        r.raise_for_status()
+        return r.content
 
     # Upload file
     def upload_file(self, path: str, content: bytes):
