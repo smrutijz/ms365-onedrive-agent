@@ -10,10 +10,12 @@ class GraphClient:
 
     # Root files
     def list_root(self):
-        return requests.get(
+        r = requests.get(
             f"{self.base_url}/me/drive/root/children",
             headers=self.headers
-        ).json()
+        )
+        r.raise_for_status()
+        return r.json().get("value", [])
 
     # Drive ID
     def get_drive_id(self):
@@ -32,10 +34,12 @@ class GraphClient:
     
     # Folder contents
     def list_folder(self, folder_id: str):
-        return requests.get(
+        r = requests.get(
             f"{self.base_url}/me/drive/items/{folder_id}/children",
             headers=self.headers
-        ).json()
+        )
+        r.raise_for_status()
+        return r.json().get("value", [])
 
     # 🔍 SEARCH (your main ask)
     def search(self, query: str):

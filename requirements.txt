@@ -7,3 +7,9 @@ pydantic
 pytest
 azure-identity
 azure-keyvault-secrets
+langchain
+langchain-openai
+openai
+langgraph
+langchain_core
+trustcall

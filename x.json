@@ -1,0 +1,313 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('smrutijz%40outlook.com')/drive/root/children",
+  "value": [
+    {
+      "createdDateTime": "2025-09-18T01:38:34Z",
+      "eTag": "\"{5647BDAF-52BC-4806-A143-4A6F9F96F40F},1\"",
+      "id": "9509D56FD07A9FEF!s5647bdaf52bc4806a1434a6f9f96f40f",
+      "lastModifiedDateTime": "2025-09-18T01:38:34Z",
+      "name": "Attachments",
+      "webUrl": "https://onedrive.live.com?cid=9509d56fd07a9fef&id=9509D56FD07A9FEF!s5647bdaf52bc4806a1434a6f9f96f40f",
+      "cTag": "\"c:{5647BDAF-52BC-4806-A143-4A6F9F96F40F},0\"",
+      "size": 0,
+      "createdBy": {
+        "application": {
+          "id": "b3af06fc-dbcf-4a28-98b2-4624811440d8",
+          "displayName": "i:0i.t|ms.sp.ext|b3af06fc-dbcf-4a28-98b2-4624811440d8@9188040d-6c67-4c5b-b112-36a304b66dad"
+        },
+        "user": {
+          "email": "smrutijz@outlook.com",
+          "id": "9509d56fd07a9fef",
+          "displayName": "Smruti Ranjan Satpathy"
+        }
+      },
+      "lastModifiedBy": {
+        "application": {
+          "id": "b3af06fc-dbcf-4a28-98b2-4624811440d8",
+          "displayName": "i:0i.t|ms.sp.ext|b3af06fc-dbcf-4a28-98b2-4624811440d8@9188040d-6c67-4c5b-b112-36a304b66dad"
+        },
+        "user": {
+          "email": "smrutijz@outlook.com",
+          "id": "9509d56fd07a9fef",
+          "displayName": "Smruti Ranjan Satpathy"
+        }
+      },
+      "parentReference": {
+        "driveType": "personal",
+        "driveId": "9509d56fd07a9fef",
+        "id": "9509D56FD07A9FEF!sea8cc6beffdb43d7976fbc7da445c639",
+        "name": "Documents",
+        "path": "/drive/root:",
+        "siteId": "43249e45-d64c-40c7-acf7-178326a444bb"
+      },
+      "fileSystemInfo": {
+        "createdDateTime": "2025-09-18T01:38:34Z",
+        "lastModifiedDateTime": "2025-09-18T01:38:34Z"
+      },
+      "folder": {
+        "childCount": 0,
+        "view": {
+          "sortBy": "name",
+          "sortOrder": "ascending",
+          "viewType": "thumbnails"
+        }
+      },
+      "specialFolder": {
+        "name": "attachments"
+      }
+    },
+    {
+      "createdDateTime": "2025-07-12T06:11:40Z",
+      "eTag": "\"{E92E6B78-5CF7-4222-97B8-9BBFCF6FB47F},1\"",
+      "id": "9509D56FD07A9FEF!se92e6b785cf7422297b89bbfcf6fb47f",
+      "lastModifiedDateTime": "2025-07-12T06:11:40Z",
+      "name": "Documents",
+      "webUrl": "https://onedrive.live.com?cid=9509d56fd07a9fef&id=9509D56FD07A9FEF!se92e6b785cf7422297b89bbfcf6fb47f",
+      "cTag": "\"c:{E92E6B78-5CF7-4222-97B8-9BBFCF6FB47F},0\"",
+      "size": 0,
+      "createdBy": {
+        "application": {
+          "id": "00000000-0000-0000-0000-000000048beb",
+          "displayName": "i:0i.t|ms.sp.ext|00000000-0000-0000-0000-000000048beb@9188040d-6c67-4c5b-b112-36a304b66dad"
+        },
+        "user": {
+          "email": "smrutijz@outlook.com",
+          "id": "9509d56fd07a9fef",
+          "displayName": "Smruti Ranjan Satpathy"
+        }
+      },
+      "lastModifiedBy": {
+        "application": {
+          "id": "00000000-0000-0000-0000-000000048beb",
+          "displayName": "i:0i.t|ms.sp.ext|00000000-0000-0000-0000-000000048beb@9188040d-6c67-4c5b-b112-36a304b66dad"
+        },
+        "user": {
+          "email": "smrutijz@outlook.com",
+          "id": "9509d56fd07a9fef",
+          "displayName": "Smruti Ranjan Satpathy"
+        }
+      },
+      "parentReference": {
+        "driveType": "personal",
+        "driveId": "9509d56fd07a9fef",
+        "id": "9509D56FD07A9FEF!sea8cc6beffdb43d7976fbc7da445c639",
+        "name": "Documents",
+        "path": "/drive/root:",
+        "siteId": "43249e45-d64c-40c7-acf7-178326a444bb"
+      },
+      "fileSystemInfo": {
+        "createdDateTime": "2025-07-12T06:11:40Z",
+        "lastModifiedDateTime": "2025-07-12T06:11:40Z"
+      },
+      "folder": {
+        "childCount": 1,
+        "view": {
+          "sortBy": "name",
+          "sortOrder": "ascending",
+          "viewType": "thumbnails"
+        }
+      },
+      "specialFolder": {
+        "name": "documents"
+      }
+    },
+    {
+      "createdDateTime": "2025-07-12T06:11:36Z",
+      "eTag": "\"{898A5775-C2EE-4E96-898E-EBA6AB125BD0},1\"",
+      "id": "9509D56FD07A9FEF!s898a5775c2ee4e96898eeba6ab125bd0",
+      "lastModifiedDateTime": "2025-07-12T06:11:36Z",
+      "name": "Personal Vault",
+      "cTag": "\"c:{898A5775-C2EE-4E96-898E-EBA6AB125BD0},1\"",
+      "size": 0,
+      "createdBy": {
+        "user": {
+          "displayName": "System Account"
+        }
+      },
+      "lastModifiedBy": {
+        "user": {
+          "displayName": "System Account"
+        }
+      },
+      "parentReference": {
+        "driveType": "personal",
+        "driveId": "9509d56fd07a9fef",
+        "id": "9509D56FD07A9FEF!sea8cc6beffdb43d7976fbc7da445c639",
+        "name": "Documents",
+        "path": "/drive/root:",
+        "siteId": "43249e45-d64c-40c7-acf7-178326a444bb"
+      },
+      "fileSystemInfo": {
+        "createdDateTime": "2025-07-12T06:11:36Z",
+        "lastModifiedDateTime": "2025-07-12T06:11:36Z"
+      },
+      "remoteItem": {
+        "id": "013UHZ6F56Y2GOVW7725BZO354PWSELRRZ",
+        "size": 0,
+        "folder": {
+          "childCount": 0
+        },
+        "parentReference": {
+          "driveType": "personal",
+          "driveId": "b!RZ4kQ0zWx0Cs9xeDJqREu256XCGI4INFg8wHKofBwcFsjHqZQzJsR7LhpG5K0wH4"
+        },
+        "sharepointIds": {
+          "listId": "997a8c6c-3243-476c-b2e1-a46e4ad301f8",
+          "listItemUniqueId": "5e6e9e94-f5c4-4240-a68b-282595f78c8c",
+          "siteId": "43249e45-d64c-40c7-acf7-178326a444bb",
+          "siteUrl": "https://my.microsoftpersonalcontent.com/personal/9509d56fd07a9fef",
+          "webId": "215c7a6e-e088-4583-83cc-072a87c1c1c1"
+        }
+      }
+    },
+    {
+      "createdDateTime": "2025-07-12T06:11:41Z",
+      "eTag": "\"{E782C76D-84C4-4AC7-94B5-BE6F8780CDA4},1\"",
+      "id": "9509D56FD07A9FEF!se782c76d84c44ac794b5be6f8780cda4",
+      "lastModifiedDateTime": "2025-07-12T06:11:41Z",
+      "name": "Pictures",
+      "webUrl": "https://onedrive.live.com?cid=9509d56fd07a9fef&id=9509D56FD07A9FEF!se782c76d84c44ac794b5be6f8780cda4",
+      "cTag": "\"c:{E782C76D-84C4-4AC7-94B5-BE6F8780CDA4},0\"",
+      "size": 0,
+      "createdBy": {
+        "application": {
+          "id": "00000000-0000-0000-0000-000000048beb",
+          "displayName": "i:0i.t|ms.sp.ext|00000000-0000-0000-0000-000000048beb@9188040d-6c67-4c5b-b112-36a304b66dad"
+        },
+        "user": {
+          "email": "smrutijz@outlook.com",
+          "id": "9509d56fd07a9fef",
+          "displayName": "Smruti Ranjan Satpathy"
+        }
+      },
+      "lastModifiedBy": {
+        "application": {
+          "id": "00000000-0000-0000-0000-000000048beb",
+          "displayName": "i:0i.t|ms.sp.ext|00000000-0000-0000-0000-000000048beb@9188040d-6c67-4c5b-b112-36a304b66dad"
+        },
+        "user": {
+          "email": "smrutijz@outlook.com",
+          "id": "9509d56fd07a9fef",
+          "displayName": "Smruti Ranjan Satpathy"
+        }
+      },
+      "parentReference": {
+        "driveType": "personal",
+        "driveId": "9509d56fd07a9fef",
+        "id": "9509D56FD07A9FEF!sea8cc6beffdb43d7976fbc7da445c639",
+        "name": "Documents",
+        "path": "/drive/root:",
+        "siteId": "43249e45-d64c-40c7-acf7-178326a444bb"
+      },
+      "fileSystemInfo": {
+        "createdDateTime": "2025-07-12T06:11:41Z",
+        "lastModifiedDateTime": "2025-07-12T06:11:41Z"
+      },
+      "folder": {
+        "childCount": 0,
+        "view": {
+          "sortBy": "name",
+          "sortOrder": "ascending",
+          "viewType": "thumbnails"
+        }
+      },
+      "specialFolder": {
+        "name": "photos"
+      }
+    },
+    {
+      "@microsoft.graph.downloadUrl": "https://my.microsoftpersonalcontent.com/personal/9509d56fd07a9fef/_layouts/15/download.aspx?UniqueId=aea6ae43-9aad-458c-a0cc-a86efa8793a4&Translate=false&tempauth=v1e.eyJzaXRlaWQiOiI0MzI0OWU0NS1kNjRjLTQwYzctYWNmNy0xNzgzMjZhNDQ0YmIiLCJhcHBfZGlzcGxheW5hbWUiOiJQZXJzb25hbE9uZURyaXZlQWdlbnQiLCJhcHBpZCI6ImM4MjkyYTk4LTEwMjUtNDM3ZS05NDdiLTIxNjc5ZDcxZmJhMCIsImF1ZCI6IjAwMDAwMDAzLTAwMDAtMGZmMS1jZTAwLTAwMDAwMDAwMDAwMC9teS5taWNyb3NvZnRwZXJzb25hbGNvbnRlbnQuY29tQDkxODgwNDBkLTZjNjctNGM1Yi1iMTEyLTM2YTMwNGI2NmRhZCIsImV4cCI6IjE3NjU4MTU3OTkifQ.b8gCcBRjXSl8vAf6Vw813I6K5cFRzcuEDfQf5CvHfJhxX-_RTTLC5ssx0LgY_ZETrv5grpfUzsStymMZ1RiPZN8CjxcfCT3G7XKERFAcJReqdIaTgqGlMk-U_T4WD10RK98E0rk4HTC5GDvZ1XdRdFGxvJwQb78VecWC3IUQhFmIRcol4wPhQjYkIt6FqC8Ndt8f2z1E4yoB87dCzmWycRA8Cj8APgN4tG4ezWPBQtCJcdoijWUm74K7PFJcKvQ5jaKNMxazjVHSPRnWaFt01IH-HbWUvVC7n4HA4WavgfutVE5C6P_47pY8wgmeqkHE5wWEQ_SPtBgdx1rxRtSXcwlEv9R-jfsSr51oy4oEyXac94jIi34YEzIgIb3haLNobGEUWXNUUy44CKMQ_fYQB8Xuefb8HCh9c9obMHHX94Y3xq8FPO7KEL-H_9DRQKT9.LzSgxJsP1pjqVFVdoWtUfat_XZOVM8p56-ULbaoDDG8&ApiVersion=2.0",
+      "createdDateTime": "2025-07-12T06:11:41Z",
+      "eTag": "\"{AEA6AE43-9AAD-458C-A0CC-A86EFA8793A4},1\"",
+      "id": "9509D56FD07A9FEF!saea6ae439aad458ca0cca86efa8793a4",
+      "lastModifiedDateTime": "2025-07-12T06:11:41Z",
+      "name": "Getting started with OneDrive.pdf",
+      "webUrl": "https://onedrive.live.com?cid=9509d56fd07a9fef&id=9509D56FD07A9FEF!saea6ae439aad458ca0cca86efa8793a4",
+      "cTag": "\"c:{AEA6AE43-9AAD-458C-A0CC-A86EFA8793A4},1\"",
+      "size": 1151898,
+      "createdBy": {
+        "application": {
+          "id": "00000000-0000-0000-0000-000000048beb",
+          "displayName": "i:0i.t|ms.sp.ext|00000000-0000-0000-0000-000000048beb@9188040d-6c67-4c5b-b112-36a304b66dad"
+        },
+        "user": {
+          "email": "smrutijz@outlook.com",
+          "id": "9509d56fd07a9fef",
+          "displayName": "Smruti Ranjan Satpathy"
+        }
+      },
+      "lastModifiedBy": {
+        "application": {
+          "id": "00000000-0000-0000-0000-000000048beb",
+          "displayName": "i:0i.t|ms.sp.ext|00000000-0000-0000-0000-000000048beb@9188040d-6c67-4c5b-b112-36a304b66dad"
+        },
+        "user": {
+          "email": "smrutijz@outlook.com",
+          "id": "9509d56fd07a9fef",
+          "displayName": "Smruti Ranjan Satpathy"
+        }
+      },
+      "parentReference": {
+        "driveType": "personal",
+        "driveId": "9509d56fd07a9fef",
+        "id": "9509D56FD07A9FEF!sea8cc6beffdb43d7976fbc7da445c639",
+        "name": "Documents",
+        "path": "/drive/root:",
+        "siteId": "43249e45-d64c-40c7-acf7-178326a444bb"
+      },
+      "file": {
+        "mimeType": "application/pdf",
+        "hashes": {
+          "quickXorHash": "18/IWu6BIWRDdxpgFwLzWtvjicQ="
+        }
+      },
+      "fileSystemInfo": {
+        "createdDateTime": "2025-07-12T06:11:41Z",
+        "lastModifiedDateTime": "2025-07-12T06:11:41Z"
+      }
+    },
+    {
+      "@microsoft.graph.downloadUrl": "https://my.microsoftpersonalcontent.com/personal/9509d56fd07a9fef/_layouts/15/download.aspx?UniqueId=90f607c8-05a6-4a84-bbb5-21909ffe77ca&Translate=false&tempauth=v1e.eyJzaXRlaWQiOiI0MzI0OWU0NS1kNjRjLTQwYzctYWNmNy0xNzgzMjZhNDQ0YmIiLCJhcHBfZGlzcGxheW5hbWUiOiJQZXJzb25hbE9uZURyaXZlQWdlbnQiLCJhcHBpZCI6ImM4MjkyYTk4LTEwMjUtNDM3ZS05NDdiLTIxNjc5ZDcxZmJhMCIsImF1ZCI6IjAwMDAwMDAzLTAwMDAtMGZmMS1jZTAwLTAwMDAwMDAwMDAwMC9teS5taWNyb3NvZnRwZXJzb25hbGNvbnRlbnQuY29tQDkxODgwNDBkLTZjNjctNGM1Yi1iMTEyLTM2YTMwNGI2NmRhZCIsImV4cCI6IjE3NjU4MTU3OTkifQ.DZMWMtqQaO14Paw1EsD6TZPc8CiC9lCn9CXcVUCdKbL8zIRb6QMM561r9bzkgUIxVzR3F6vI-LsJTq8aLhOiku3_mruBNn6LsoZbfbFloIHPt_23DEvpnGpEV0eOapUU3JRShhRqGmADHBN3cwqc8WIz82FmEeJA2lWR-pBFIk633Tl-k6ObDtoeLQu51tt2ADKC1nmLrzcYgLuEeDZpiFWQRXFGQQAWgwEexUD2jCuLFlpJQjtD8gnCcMyBCN0u9go12IOXptqXZJeWG19ER0KOojNeFLYnzOPldbum_L2BRmKF-jwSoNgELP7bP8QC6hgME7cXo47TsVBfYFWBQvi_VcaX2RcKUiTr464YAs9-BhFBPxemWWydwmq9UWXhQ-pKnsGsFdtTm7yOAn_qfTG4FzOGqX-jKVBH8_516pN7ty5VHySQsLvdzADnHLe8.D4OIaiYWKWYMd6c4t6_-vFSWH7ELrIFNI3OSotG-rVs&ApiVersion=2.0",
+      "createdDateTime": "2025-12-15T15:21:00Z",
+      "eTag": "\"{90F607C8-05A6-4A84-BBB5-21909FFE77CA},1\"",
+      "id": "9509D56FD07A9FEF!s90f607c805a64a84bbb521909ffe77ca",
+      "lastModifiedDateTime": "2025-12-15T15:21:00Z",
+      "name": "test.txt",
+      "webUrl": "https://onedrive.live.com?cid=9509d56fd07a9fef&id=9509D56FD07A9FEF!s90f607c805a64a84bbb521909ffe77ca",
+      "cTag": "\"c:{90F607C8-05A6-4A84-BBB5-21909FFE77CA},1\"",
+      "size": 4,
+      "createdBy": {
+        "user": {
+          "email": "smrutijz@outlook.com",
+          "id": "9509d56fd07a9fef",
+          "displayName": "Smruti Ranjan Satpathy"
+        }
+      },
+      "lastModifiedBy": {
+        "user": {
+          "email": "smrutijz@outlook.com",
+          "id": "9509d56fd07a9fef",
+          "displayName": "Smruti Ranjan Satpathy"
+        }
+      },
+      "parentReference": {
+        "driveType": "personal",
+        "driveId": "9509d56fd07a9fef",
+        "id": "9509D56FD07A9FEF!sea8cc6beffdb43d7976fbc7da445c639",
+        "name": "Documents",
+        "path": "/drive/root:",
+        "siteId": "43249e45-d64c-40c7-acf7-178326a444bb"
+      },
+      "file": {
+        "mimeType": "text/plain",
+        "hashes": {
+          "quickXorHash": "dCjDHOgAAAAAAAAABAAAAAAAAAA="
+        }
+      },
+      "fileSystemInfo": {
+        "createdDateTime": "2025-12-15T15:21:00Z",
+        "lastModifiedDateTime": "2025-12-15T15:21:00Z"
+      }
+    }
+  ]
+}

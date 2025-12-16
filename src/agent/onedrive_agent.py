@@ -1,7 +1,30 @@
-from langgraph import Node, Graph, run_graph
+
+# from langgraph import Node, Graph, run_graph
+from langgraph.graph import StateGraph, START, END
 from pydantic import BaseModel
 from typing import List, Optional, Literal
+from langchain_openai import ChatOpenAI
+from trustcall import create_extractor
 from src.clients.graph_api import GraphClient
+
+
+
+# -----------------------
+# openai
+# -----------------------
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise RuntimeError("Please set OPENAI_API_KEY in .env or env")
+
+OPENAI_MODEL = os.getenv("OPENAI_MODEL")
+if not OPENAI_MODEL:
+    raise RuntimeError("Please set OPENAI_MODEL in .env or env")
+
 
 # -----------------------
 # Models
@@ -81,32 +104,57 @@ def list_children(state: AgentState, graph_client: GraphClient):
     ]
     return state
 
+def build_decision_prompt(state: AgentState) -> str:
+    return f"""
+You are navigating a personal OneDrive folder tree.
+
+User query:
+"{state.user_query}"
+
+Optional drive description:
+"{state.drive_description}"
+
+Current path:
+{state.current_path or "/"}
+
+Items in this location:
+{[c.model_dump() for c in state.candidates]}
+
+attempt:
+{state.attempt}
+
+depth:
+{state.depth}
+
+Your task:
+- Decide which ONE item is most relevant to explore next
+- Choose a folder if it narrows the search
+- Choose a file if it likely satisfies the query
+- Stop if nothing is relevant
+
+Return STRICT JSON matching this schema:
+{{
+  "action": "enter_folder | select_file | stop",
+  "id": "...",
+  "name": "...",
+  "reason": "..."
+}}
+"""
+
 def decide_next(state: AgentState, llm_tool):
     if not state.candidates:
         state.done = True
         return state
 
-    # Prepare LLM input
-    llm_input = {
-        "user_query": state.user_query,
-        "drive_description": state.drive_description,
-        "current_path": state.current_path,
-        "candidates": [c.dict() for c in state.candidates],
-        "rejected_paths": [r.dict() for r in state.rejected_paths],
-        "attempt": state.attempt,
-        "depth": state.depth
-    }
-
-    # Call LLM (external tool or OpenAI) to decide next item
-    llm_response = llm_tool.decide_next(llm_input)
-
-    # Example LLM response:
-    # {
-    #   "action": "select_file" or "enter_folder",
-    #   "id": "item-id",
-    #   "name": "Item Name",
-    #   "reason": "LLM explanation why this is most relevant"
-    # }
+    # LLM
+    llm_input = build_decision_prompt(state)
+    model = ChatOpenAI(model=OPENAI_MODEL, temperature=0)
+    extractor = create_extractor(
+        model,
+        tools=[Candidate],
+        tool_choice="Candidate",
+    )
+    llm_response = extractor.invoke(llm_input)
 
     chosen_id = llm_response["id"]
     chosen_name = llm_response["name"]
@@ -142,6 +190,7 @@ def download_and_verify(state: AgentState, graph_client: GraphClient):
     if state.current_file:
         file_bytes = graph_client.download_file(state.current_file.id)
         # Placeholder Dockling: convert to markdown string
+        md_text = "this is resume"
         md_text = file_bytes.decode("utf-8", errors="ignore")  # In practice, call Dockling API
         state.current_file.content_md = md_text
 
@@ -192,12 +241,19 @@ def build_agent_graph(state: AgentState, graph_client: GraphClient):
 # -----------------------
 # Run Example
 # -----------------------
+from src.utils.token_manager import TokenManager
+import os
+import json
 
-# access_token = "<YOUR_TOKEN>"
-# graph_client = GraphClient(access_token)
-# state = AgentState(user_query="find my resume, which i blv in pdf format", start_item_id=None, drive_description="Files organized by Work, Personal, Education")
+access_token = TokenManager().get_access_token()
+graph_client = GraphClient(access_token)
+state = AgentState(
+    user_query="find my resume, which i blv in pdf format",
+    start_item_id=None,
+    drive_description="Files organized by Work, Personal, Education"
+    )
 
-# g = build_agent_graph(state, graph_client)
-# final_state = run_graph(g)
-# print(final_state.current_file)
-# print([d.dict() for d in final_state.decision_trace])
+g = build_agent_graph(state, graph_client)
+final_state = run_graph(g)
+print(final_state.current_file)
+print([d.dict() for d in final_state.decision_trace])
