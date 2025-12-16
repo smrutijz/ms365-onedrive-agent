@@ -28,6 +28,7 @@ class Candidate(BaseModel):
     name: str
     type: Literal["folder", "file"]
     mime_type: Optional[str]
+    parent_reference_path: Optional[str]
 
 class DecisionStep(BaseModel):
     attempt: int
@@ -95,6 +96,7 @@ def list_children(state: AgentState, config):
                 name=i["name"],
                 type="folder" if i.get("folder") else "file",
                 mime_type=i.get("file", {}).get("mimeType"),
+                parent_reference_path=i.get("parentReference", {}).get("path").replace("/drive/root:", "") if i.get("parentReference") else None,
             )
             for i in items
         ]
