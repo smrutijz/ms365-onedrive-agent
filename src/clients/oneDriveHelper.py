@@ -21,7 +21,7 @@ class GraphClient:
     def get_drive_id(self):
         r = requests.get(f"{self.base_url}/me/drive", headers=self.headers)
         r.raise_for_status()
-        return r.json()["id"]
+        return r.json().get("id", None)
 
     # Folder ID by path
     def get_folder_id_by_path(self, path: str):
@@ -30,7 +30,7 @@ class GraphClient:
             headers=self.headers
         )
         r.raise_for_status()
-        return r.json()["id"]
+        return r.json().get("id", None)
     
     # Folder contents
     def list_folder(self, folder_id: str):
@@ -41,12 +41,14 @@ class GraphClient:
         r.raise_for_status()
         return r.json().get("value", [])
 
-    # 🔍 SEARCH (DON NOT USE - OneDrive’s legacy consumer search)
+    # SEARCH (OneDrive’s legacy consumer search)
     def search(self, query: str):
-        return requests.get(
+        r = requests.get(
             f"{self.base_url}/me/drive/root/search(q='{query}')",
             headers=self.headers
-        ).json()
+        )
+        r.raise_for_status()
+        return r.json().get("value", [])
     
     # Download file
     def download_file(self, file_id: str) -> bytes:

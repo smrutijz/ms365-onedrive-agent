@@ -33,7 +33,7 @@ class Candidate(BaseModel):
     raw: dict
 
 class Decision(BaseModel):
-    action: Literal["enter_folder", "select_file", "stop"]
+    action: Literal["enter_folder", "select_file"]
     id: str
     name: str
     reason: str
@@ -79,8 +79,6 @@ class AgentState(BaseModel):
     candidates: List[Candidate] = []
     decision_trace: List[DecisionStep] = []
     current_file: Optional[FoundFile] = None
-    selected_file: bool = False
-    stop_navigation: bool = False
 
 # -----------------------
 # Node implementations
@@ -123,18 +121,21 @@ def list_children(state: AgentState, config):
 
 def build_decision_prompt(state: AgentState) -> str:
     return f"""
-You are navigating a OneDrive folder tree to find the file that best matches the user's query.
+You are a file navigation agent exploring a OneDrive folder tree to find the file that best matches the user's search query. Use the folder’s listing and metadata to choose the next action.
 
-User query:
-"{state.user_query}"
+### CONTEXT
+User search query:
+\"{state.user_query}\"
 
 Drive description:
-"{state.drive_description}"
+\"{state.drive_description}\"
 
-Current path:
-"{state.current_path or '/'}"
+Current folder path:
+\"{state.current_path or '/'}\"
 
-Folder items (with metadata):
+Contents of this folder:
+Each item includes both simplified fields and full OneDrive metadata:
+
 {[
     {
         "id": c.id,
@@ -142,37 +143,43 @@ Folder items (with metadata):
         "type": c.type,
         "mime_type": c.mime_type,
         "parent_path": c.parent_reference_path,
-        "raw": c.raw
+        "complete_metadata": c.raw
     }
     for c in state.candidates
 ]}
 
-### IMPORTANT DECISION RULES ###
+### YOUR GOAL
+Choose the **single best next action** that will help you find the most relevant file for the user’s query.
 
-1. **Do NOT select a file unless you are confident it is the correct file.**
-2. If the user mentions a folder (e.g., "inside test folder"), you MUST prioritize entering folders whose names match or relate to that folder.
-3. If a file matches the name but is in the wrong folder, DO NOT select it. Instead, continue navigating.
-4. Only use "stop" when you are certain there is no better path to explore.
-5. Prefer entering folders over selecting files when uncertain.
-6. Your goal is to navigate deeper until you find the most relevant file.
+### ACTION SETTINGS
+You may return one of these actions only:
+- **enter_folder**: Dive into a subfolder to continue searching
+- **select_file**: Choose a file as the best match
 
-Return STRICT JSON ONLY:
+### OUTPUT FORMAT
+Return **STRICT JSON ONLY** with the following keys (no extra text outside the JSON object):
 
 {{
-  "action": "enter_folder" | "select_file" | "stop",
-  "id": "<id>",
-  "name": "<name>",
-  "reason": "<why you chose this>"
+  "action": "<enter_folder | select_file>",
+  "id": "<ID of the chosen item>",
+  "name": "<Name of the chosen item>",
+  "reason": "<Justification for your choice>"
 }}
-"""
 
+### GUIDANCE
+- If the query matches a file's name, path, or content strongly, use **select_file**.
+- If there are subfolders that likely contain better matches, use **enter_folder**.
+- Provide a concise reason describing why you chose that action in terms of relevance to the query.
+
+Respond with JSON only.
+"""
 
 
 def decide_next(state: AgentState):
     if not state.candidates:
-        return {"stop_navigation": True}
+        return {"done": True}
 
-    llm = ChatOpenAI(model=OPENAI_MODEL, temperature=0)
+    llm = ChatOpenAI(model=OPENAI_MODEL, openai_api_key=OPENAI_API_KEY, temperature=0)
 
     extractor = create_extractor(
         llm,
@@ -185,7 +192,7 @@ def decide_next(state: AgentState):
     ).get("responses", [None])[0]
 
     if decision is None:
-        return {"stop_navigation": True}
+        return {"done": True}
 
     # Log the decision
     trace = DecisionStep(
@@ -198,37 +205,36 @@ def decide_next(state: AgentState):
         alternatives=[c.name for c in state.candidates if c.id != decision.id],
     )
 
-    updates = {
-        "decision_trace": state.decision_trace + [trace],
-        "selected_file": False,
-        "stop_navigation": False
-    }
+    updates = {"decision_trace": state.decision_trace + [trace]}
 
-    # ✅ Action: select file
+    # Handle actions
     if decision.action == "select_file":
-        updates.update({
-            "current_file": FoundFile(
-                id=decision.id,
-                name=decision.name,
-                path=f"{state.current_path}/{decision.name}"
-            ),
-            "selected_file": True
-        })
-        return updates
+        updates["current_file"] = FoundFile(
+            id=decision.id,
+            name=decision.name,
+            path=f"{state.current_path}/{decision.name}"
+        )
+        updates["done"] = True
 
-    # ✅ Action: enter folder
-    if decision.action == "enter_folder":
+    # elif decision.action == "enter_folder":
+    #     updates.update({
+    #         "current_item_id": decision.id,
+    #         "current_path": f"{state.current_path}/{decision.name}",
+    #         "depth": state.depth + 1
+    #     })
+    #     updates["done"] = False
+
+    else:
         updates.update({
             "current_item_id": decision.id,
             "current_path": f"{state.current_path}/{decision.name}",
             "depth": state.depth + 1
         })
-        return updates
+        updates["done"] = False
+        updates["attempt"]= state.attempt + 1
+        updates["current_file"] = None
 
-    # ✅ Action: stop
-    updates["stop_navigation"] = True
     return updates
-
 
 
 def build_relevance_prompt(state: AgentState, content: str) -> str:
@@ -294,7 +300,7 @@ def download_and_verify(state: AgentState, config):
     md_text = file_bytes.decode("utf-8", errors="ignore")
 
     # LLM relevance scoring
-    llm = ChatOpenAI(model=OPENAI_MODEL, temperature=0)
+    llm = ChatOpenAI(model=OPENAI_MODEL, openai_api_key=OPENAI_API_KEY, temperature=0)
 
     extractor = create_extractor(
         llm,
@@ -326,6 +332,7 @@ def download_and_verify(state: AgentState, config):
 
     # ❌ If file is NOT relevant
     return {
+        "done": False,
         "verified": False,
         "attempt": state.attempt + 1,
         "current_file": None,
@@ -354,17 +361,17 @@ def build_agent_graph():
     graph.add_edge(START, "resolve_start")
     graph.add_edge("resolve_start", "list_children")
     graph.add_edge("list_children", "decide_next")
-
-    def route(state: AgentState):
-        if state.selected_file:
-            return "download_and_verify"
-        if state.stop_navigation:
-            return END
-        return "list_children"
-
-    graph.add_conditional_edges("decide_next", route)
-
+    # graph.add_edge("decide_next", END)
+    graph.add_conditional_edges(
+        "decide_next",
+        lambda s: END if s.attempt==s.max_attempts else "download_and_verify" if s.done else "list_children",
+    )
+    # graph.add_conditional_edges(
+    #     "download_and_verify",
+    #     lambda s: END if s.verified and s.done else "resolve_start"
+    # )
     graph.add_edge("download_and_verify", END)
+
 
     return graph.compile()
 
@@ -375,12 +382,12 @@ def build_agent_graph():
 # -----------------------
 
 from src.utils.token_manager import TokenManager
-access_token = TokenManager().refresh_access_token()
-# access_token = TokenManager().get_access_token()
+# access_token = TokenManager().refresh_access_token()
+access_token = TokenManager().get_access_token()
 client = GraphClient(access_token)
-
+user_query = "find my test.txt, which is within the test folder not in root"
 initial_state = AgentState(
-    user_query="find my test.txt which is within the test folder not in root",
+    user_query=user_query,
     drive_description="Files organized by Work, Personal, Education"
 )
 

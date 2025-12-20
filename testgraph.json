@@ -1,0 +1,385 @@
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(microsoft.graph.driveItem)",
+    "value": [
+        {
+            "createdDateTime": "2025-12-20T03:09:54Z",
+            "id": "9509D56FD07A9FEF!sf91afd7de5784802b367fea1537400ee",
+            "lastModifiedDateTime": "2025-12-20T03:09:54Z",
+            "name": "AKASH_MUKHERJEE_act_resume.pdf",
+            "size": 72168,
+            "webUrl": "https://onedrive.live.com/?id=f91afd7d-e578-4802-b367-fea1537400ee&cid=9509d56fd07a9fef",
+            "commentSettings": {
+                "commentingDisabled": {
+                    "isDisabled": false
+                }
+            },
+            "createdBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "lastModifiedBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "parentReference": {
+                "driveId": "9509d56fd07a9fef",
+                "driveType": "personal",
+                "id": "9509D56FD07A9FEF!s475ae488b62a40a492710b0a95439ed9",
+                "name": "others",
+                "path": "/drive/root:/01%20Resume/others"
+            },
+            "file": {
+                "mimeType": "application/pdf"
+            },
+            "fileSystemInfo": {
+                "createdDateTime": "2025-12-20T03:09:54Z",
+                "lastModifiedDateTime": "2025-12-20T03:09:54Z"
+            },
+            "searchResult": {}
+        },
+        {
+            "createdDateTime": "2025-12-20T03:09:53Z",
+            "id": "9509D56FD07A9FEF!s3b8b5cd94bee4a21930106a1a1e11846",
+            "lastModifiedDateTime": "2025-05-30T04:25:29Z",
+            "name": "Resume_Smruti Ranjan Satpathy_Data and AI Lead.pdf",
+            "size": 453174,
+            "webUrl": "https://onedrive.live.com/?id=3b8b5cd9-4bee-4a21-9301-06a1a1e11846&cid=9509d56fd07a9fef",
+            "commentSettings": {
+                "commentingDisabled": {
+                    "isDisabled": false
+                }
+            },
+            "createdBy": {
+                "user": {
+                    "displayName": "SMRUTI RANJAN SATPATHY;Smruti Ranjan Satpathy"
+                }
+            },
+            "lastModifiedBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "parentReference": {
+                "driveId": "9509d56fd07a9fef",
+                "driveType": "personal",
+                "id": "9509D56FD07A9FEF!s15e6663862cf4bcbae3457a45a218cfd",
+                "name": "01 Resume",
+                "path": "/drive/root:/01%20Resume"
+            },
+            "file": {
+                "mimeType": "application/pdf"
+            },
+            "fileSystemInfo": {
+                "createdDateTime": "2025-12-20T03:09:53Z",
+                "lastModifiedDateTime": "2025-05-30T04:25:29Z"
+            },
+            "searchResult": {}
+        },
+        {
+            "createdDateTime": "2025-12-20T03:09:56Z",
+            "id": "9509D56FD07A9FEF!s90aa82738af44da08b69e28e7e0544be",
+            "lastModifiedDateTime": "2024-02-28T12:56:54Z",
+            "name": "Resume_Smruti Ranjan Satpathy_Senior Data Scientist .pdf",
+            "size": 342283,
+            "webUrl": "https://onedrive.live.com/?id=90aa8273-8af4-4da0-8b69-e28e7e0544be&cid=9509d56fd07a9fef",
+            "commentSettings": {
+                "commentingDisabled": {
+                    "isDisabled": false
+                }
+            },
+            "createdBy": {
+                "user": {
+                    "displayName": "SMRUTI RANJAN SATPATHY;Smruti Ranjan Satpathy"
+                }
+            },
+            "lastModifiedBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "parentReference": {
+                "driveId": "9509d56fd07a9fef",
+                "driveType": "personal",
+                "id": "9509D56FD07A9FEF!sb9a36fad3ce746688bbe38ac18e9cc02",
+                "name": "old",
+                "path": "/drive/root:/01%20Resume/old"
+            },
+            "file": {
+                "mimeType": "application/pdf"
+            },
+            "fileSystemInfo": {
+                "createdDateTime": "2025-12-20T03:09:56Z",
+                "lastModifiedDateTime": "2024-02-28T12:56:54Z"
+            },
+            "searchResult": {}
+        },
+        {
+            "createdDateTime": "2025-12-20T03:09:57Z",
+            "id": "9509D56FD07A9FEF!s04dfeb47fd924c44aeda7c0a4945fd2f",
+            "lastModifiedDateTime": "2022-10-02T14:30:04Z",
+            "name": "Resume_Smruti Ranjan Satpathy_Senior Data Scientistbefor 06 Sep 2023.pdf",
+            "size": 364214,
+            "webUrl": "https://onedrive.live.com/?id=04dfeb47-fd92-4c44-aeda-7c0a4945fd2f&cid=9509d56fd07a9fef",
+            "commentSettings": {
+                "commentingDisabled": {
+                    "isDisabled": false
+                }
+            },
+            "createdBy": {
+                "user": {
+                    "displayName": "SMRUTI RANJAN SATPATHY;Smruti Ranjan Satpathy"
+                }
+            },
+            "lastModifiedBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "parentReference": {
+                "driveId": "9509d56fd07a9fef",
+                "driveType": "personal",
+                "id": "9509D56FD07A9FEF!sb9a36fad3ce746688bbe38ac18e9cc02",
+                "name": "old",
+                "path": "/drive/root:/01%20Resume/old"
+            },
+            "file": {
+                "mimeType": "application/pdf"
+            },
+            "fileSystemInfo": {
+                "createdDateTime": "2025-12-20T03:09:57Z",
+                "lastModifiedDateTime": "2022-10-02T14:30:04Z"
+            },
+            "searchResult": {}
+        },
+        {
+            "createdDateTime": "2025-12-20T03:10:02Z",
+            "id": "9509D56FD07A9FEF!s5a32761ed4f644e182ed8b4a575c41ee",
+            "lastModifiedDateTime": "2020-12-03T13:06:52Z",
+            "name": "Sumitra Kar_Project Manager_Resume_4.pdf",
+            "size": 892605,
+            "webUrl": "https://onedrive.live.com/?id=5a32761e-d4f6-44e1-82ed-8b4a575c41ee&cid=9509d56fd07a9fef",
+            "commentSettings": {
+                "commentingDisabled": {
+                    "isDisabled": false
+                }
+            },
+            "createdBy": {
+                "user": {
+                    "displayName": "abdou;Smruti Ranjan Satpathy"
+                }
+            },
+            "lastModifiedBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "parentReference": {
+                "driveId": "9509d56fd07a9fef",
+                "driveType": "personal",
+                "id": "9509D56FD07A9FEF!s60a5cef7fcbb47839df0b906677d9a04",
+                "name": "old",
+                "path": "/drive/root:/01%20Resume/others/old"
+            },
+            "file": {
+                "mimeType": "application/pdf"
+            },
+            "fileSystemInfo": {
+                "createdDateTime": "2025-12-20T03:10:02Z",
+                "lastModifiedDateTime": "2020-12-03T13:06:52Z"
+            },
+            "searchResult": {}
+        },
+        {
+            "createdDateTime": "2025-12-20T03:10:03Z",
+            "id": "9509D56FD07A9FEF!s92916d3ee0ad4313927d9ba9f1e9adda",
+            "lastModifiedDateTime": "2020-12-03T14:44:07Z",
+            "name": "Sumitra Kar_Project Manager_Resume_5.pdf",
+            "size": 418576,
+            "webUrl": "https://onedrive.live.com/?id=92916d3e-e0ad-4313-927d-9ba9f1e9adda&cid=9509d56fd07a9fef",
+            "commentSettings": {
+                "commentingDisabled": {
+                    "isDisabled": false
+                }
+            },
+            "createdBy": {
+                "user": {
+                    "displayName": "SMRUTI RANJAN SATPATHY;Smruti Ranjan Satpathy"
+                }
+            },
+            "lastModifiedBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "parentReference": {
+                "driveId": "9509d56fd07a9fef",
+                "driveType": "personal",
+                "id": "9509D56FD07A9FEF!s60a5cef7fcbb47839df0b906677d9a04",
+                "name": "old",
+                "path": "/drive/root:/01%20Resume/others/old"
+            },
+            "file": {
+                "mimeType": "application/pdf"
+            },
+            "fileSystemInfo": {
+                "createdDateTime": "2025-12-20T03:10:03Z",
+                "lastModifiedDateTime": "2020-12-03T14:44:07Z"
+            },
+            "searchResult": {}
+        },
+        {
+            "createdDateTime": "2025-12-20T03:10:01Z",
+            "id": "9509D56FD07A9FEF!s59da71d0c990417f904a6758bedc608b",
+            "lastModifiedDateTime": "2020-11-27T12:11:13Z",
+            "name": "Sumitra Kar_Project Manager_Resume_3.pdf",
+            "size": 268435,
+            "webUrl": "https://onedrive.live.com/?id=59da71d0-c990-417f-904a-6758bedc608b&cid=9509d56fd07a9fef",
+            "commentSettings": {
+                "commentingDisabled": {
+                    "isDisabled": false
+                }
+            },
+            "createdBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "lastModifiedBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "parentReference": {
+                "driveId": "9509d56fd07a9fef",
+                "driveType": "personal",
+                "id": "9509D56FD07A9FEF!s60a5cef7fcbb47839df0b906677d9a04",
+                "name": "old",
+                "path": "/drive/root:/01%20Resume/others/old"
+            },
+            "file": {
+                "mimeType": "application/pdf"
+            },
+            "fileSystemInfo": {
+                "createdDateTime": "2025-12-20T03:10:01Z",
+                "lastModifiedDateTime": "2020-11-27T12:11:13Z"
+            },
+            "searchResult": {}
+        },
+        {
+            "createdDateTime": "2025-12-20T03:10:00Z",
+            "id": "9509D56FD07A9FEF!s4036e07d9da74d06b1c6bfca0ee2136e",
+            "lastModifiedDateTime": "2021-08-01T11:23:01Z",
+            "name": "Sumitra Kar_Project Manager_Resume.pdf",
+            "size": 180471,
+            "webUrl": "https://onedrive.live.com/?id=4036e07d-9da7-4d06-b1c6-bfca0ee2136e&cid=9509d56fd07a9fef",
+            "commentSettings": {
+                "commentingDisabled": {
+                    "isDisabled": false
+                }
+            },
+            "createdBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "lastModifiedBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "parentReference": {
+                "driveId": "9509d56fd07a9fef",
+                "driveType": "personal",
+                "id": "9509D56FD07A9FEF!s60a5cef7fcbb47839df0b906677d9a04",
+                "name": "old",
+                "path": "/drive/root:/01%20Resume/others/old"
+            },
+            "file": {
+                "mimeType": "application/pdf"
+            },
+            "fileSystemInfo": {
+                "createdDateTime": "2025-12-20T03:10:00Z",
+                "lastModifiedDateTime": "2021-08-01T11:23:01Z"
+            },
+            "searchResult": {}
+        },
+        {
+            "createdDateTime": "2025-12-20T03:10:01Z",
+            "id": "9509D56FD07A9FEF!s525ddeffe3fc4a6c82951616362e60a3",
+            "lastModifiedDateTime": "2020-11-20T14:46:31Z",
+            "name": "Sumitra Kar_Project Manager_Resume-1.pdf",
+            "size": 266897,
+            "webUrl": "https://onedrive.live.com/?id=525ddeff-e3fc-4a6c-8295-1616362e60a3&cid=9509d56fd07a9fef",
+            "commentSettings": {
+                "commentingDisabled": {
+                    "isDisabled": false
+                }
+            },
+            "createdBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "lastModifiedBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "parentReference": {
+                "driveId": "9509d56fd07a9fef",
+                "driveType": "personal",
+                "id": "9509D56FD07A9FEF!s60a5cef7fcbb47839df0b906677d9a04",
+                "name": "old",
+                "path": "/drive/root:/01%20Resume/others/old"
+            },
+            "file": {
+                "mimeType": "application/pdf"
+            },
+            "fileSystemInfo": {
+                "createdDateTime": "2025-12-20T03:10:01Z",
+                "lastModifiedDateTime": "2020-11-20T14:46:31Z"
+            },
+            "searchResult": {}
+        },
+        {
+            "createdDateTime": "2025-12-20T03:10:01Z",
+            "id": "9509D56FD07A9FEF!sfa5b79064b2a4049b1f21c28ff270e95",
+            "lastModifiedDateTime": "2022-05-14T12:59:58Z",
+            "name": "Sumitra Kar_Project Manager_Resume_20july22.pdf",
+            "size": 187911,
+            "webUrl": "https://onedrive.live.com/?id=fa5b7906-4b2a-4049-b1f2-1c28ff270e95&cid=9509d56fd07a9fef",
+            "commentSettings": {
+                "commentingDisabled": {
+                    "isDisabled": false
+                }
+            },
+            "createdBy": {
+                "user": {
+                    "displayName": "SMRUTI RANJAN SATPATHY;Smruti Ranjan Satpathy"
+                }
+            },
+            "lastModifiedBy": {
+                "user": {
+                    "displayName": "Smruti Ranjan Satpathy"
+                }
+            },
+            "parentReference": {
+                "driveId": "9509d56fd07a9fef",
+                "driveType": "personal",
+                "id": "9509D56FD07A9FEF!s60a5cef7fcbb47839df0b906677d9a04",
+                "name": "old",
+                "path": "/drive/root:/01%20Resume/others/old"
+            },
+            "file": {
+                "mimeType": "application/pdf"
+            },
+            "fileSystemInfo": {
+                "createdDateTime": "2025-12-20T03:10:01Z",
+                "lastModifiedDateTime": "2022-05-14T12:59:58Z"
+            },
+            "searchResult": {}
+        }
+    ]
+}
