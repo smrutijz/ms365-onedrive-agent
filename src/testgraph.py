@@ -21,14 +21,14 @@ x = requests.get(
 with open("x.json", "w", encoding="utf-8") as f:
     json.dump(x, f, ensure_ascii=False, indent=2)
 
-query="smruti"
+query="test"
 x = requests.get(
             f"{base_url}/me/drive/root/search(q='{query}')",
             headers=headers
         ).json()
 
 print([item.get("name", '') for item in x.get("value", [])])
-print([item.get("id", '') for item in x.get("value", [])])
+# print([item.get("id", '') for item in x.get("value", [])])
 
 
 with open("test.json", "w") as f:

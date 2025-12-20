@@ -41,7 +41,7 @@ class GraphClient:
         r.raise_for_status()
         return r.json().get("value", [])
 
-    # 🔍 SEARCH (your main ask)
+    # 🔍 SEARCH (DON NOT USE - OneDrive’s legacy consumer search)
     def search(self, query: str):
         return requests.get(
             f"{self.base_url}/me/drive/root/search(q='{query}')",

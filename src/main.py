@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 from src.core.config import settings
 from src.utils.keyvault import KeyVaultClient
 from src.utils.token_manager import TokenManager
-from src.clients.graph_api import GraphClient
+from src.clients.oneDriveHelper import GraphClient
 
 app = FastAPI()
 

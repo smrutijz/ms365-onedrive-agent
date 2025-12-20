@@ -1,9 +1,10 @@
+import pprint
 from langgraph.graph import StateGraph, START, END
 from pydantic import BaseModel
 from typing import List, Optional, Literal
 from langchain_openai import ChatOpenAI
 from trustcall import create_extractor
-from src.clients.graph_api import GraphClient
+from src.clients.oneDriveHelper import GraphClient
 
 
 import os
@@ -29,6 +30,13 @@ class Candidate(BaseModel):
     type: Literal["folder", "file"]
     mime_type: Optional[str]
     parent_reference_path: Optional[str]
+    raw: dict
+
+class Decision(BaseModel):
+    action: Literal["enter_folder", "select_file", "stop"]
+    id: str
+    name: str
+    reason: str
 
 class DecisionStep(BaseModel):
     attempt: int
@@ -39,11 +47,16 @@ class DecisionStep(BaseModel):
     reason: str
     alternatives: List[str]
 
+class FileRelevance(BaseModel):
+    score: float
+    reason: str
+    is_match: bool
+
 class FoundFile(BaseModel):
     id: str
     name: str
     path: str
-    content_md: Optional[str]
+    relevance: Optional[FileRelevance] = None
 
 class RejectedPath(BaseModel):
     path: str
@@ -66,11 +79,12 @@ class AgentState(BaseModel):
     candidates: List[Candidate] = []
     decision_trace: List[DecisionStep] = []
     current_file: Optional[FoundFile] = None
+    selected_file: bool = False
+    stop_navigation: bool = False
 
 # -----------------------
 # Node implementations
 # -----------------------
-# resolve_start(state, config)
 def resolve_start(state: AgentState, config):
     graph_client: GraphClient = config["configurable"]["graph_client"]
     if state.start_item_id:
@@ -89,98 +103,183 @@ def list_children(state: AgentState, config):
         else graph_client.list_folder(state.current_item_id)
     )
 
-    return {
-        "candidates": [
+    candidates = []
+    for i in items:
+        candidates.append(
             Candidate(
                 id=i["id"],
                 name=i["name"],
                 type="folder" if i.get("folder") else "file",
                 mime_type=i.get("file", {}).get("mimeType"),
-                parent_reference_path=i.get("parentReference", {}).get("path").replace("/drive/root:", "") if i.get("parentReference") else None,
+                parent_reference_path=i.get("parentReference", {})
+                    .get("path", "")
+                    .replace("/drive/root:", ""),
+                raw=i
             )
-            for i in items
-        ]
-    }
+        )
+
+    return {"candidates": candidates}
 
 
 def build_decision_prompt(state: AgentState) -> str:
     return f"""
-You are navigating a OneDrive folder tree.
+You are navigating a OneDrive folder tree to find the file that best matches the user's query.
 
-User query: "{state.user_query}"
-Drive desc: "{state.drive_description}"
+User query:
+"{state.user_query}"
 
-Path: {state.current_path or "/"}
-Items: {[c.model_dump() for c in state.candidates]}
+Drive description:
+"{state.drive_description}"
 
-Return strict JSON:
+Current path:
+"{state.current_path or '/'}"
+
+Folder items (with metadata):
+{[
+    {
+        "id": c.id,
+        "name": c.name,
+        "type": c.type,
+        "mime_type": c.mime_type,
+        "parent_path": c.parent_reference_path,
+        "raw": c.raw
+    }
+    for c in state.candidates
+]}
+
+### IMPORTANT DECISION RULES ###
+
+1. **Do NOT select a file unless you are confident it is the correct file.**
+2. If the user mentions a folder (e.g., "inside test folder"), you MUST prioritize entering folders whose names match or relate to that folder.
+3. If a file matches the name but is in the wrong folder, DO NOT select it. Instead, continue navigating.
+4. Only use "stop" when you are certain there is no better path to explore.
+5. Prefer entering folders over selecting files when uncertain.
+6. Your goal is to navigate deeper until you find the most relevant file.
+
+Return STRICT JSON ONLY:
+
 {{
-  "action": "enter_folder | select_file | stop",
-  "id": "...",
-  "name": "...",
-  "reason": "..."
+  "action": "enter_folder" | "select_file" | "stop",
+  "id": "<id>",
+  "name": "<name>",
+  "reason": "<why you chose this>"
 }}
 """
 
+
+
 def decide_next(state: AgentState):
     if not state.candidates:
-        return {"done": True}
+        return {"stop_navigation": True}
 
     llm = ChatOpenAI(model=OPENAI_MODEL, temperature=0)
 
     extractor = create_extractor(
         llm,
-        tools=[Candidate],
-        tool_choice="Candidate"
+        tools=[Decision],
+        tool_choice="Decision"
     )
 
-    if extractor is None or not hasattr(extractor, "invoke"):
-        raise RuntimeError("Extractor creation failed")
+    decision: Decision = extractor.invoke(
+        input=build_decision_prompt(state)
+    ).get("responses", [None])[0]
 
-    result = extractor.invoke(input=build_decision_prompt(state))
-    responses = result.get("responses", [])
+    if decision is None:
+        return {"stop_navigation": True}
 
-    if not responses:
-        return {"done": True}
-
-    decision = responses[0]
-    chosen_id = decision.id
-    chosen_name = decision.name
-    chosen_type = decision.type
-
-    # Workaround until you add a full Decision schema
-    reason = ""
-    action = "select_file" if chosen_type == "file" else "enter_folder"
-
+    # Log the decision
     trace = DecisionStep(
         attempt=state.attempt,
         depth=state.depth,
-        chosen_id=chosen_id,
-        chosen_name=chosen_name,
-        chosen_type=chosen_type,
-        reason=reason,
-        alternatives=[c.name for c in state.candidates if c.id != chosen_id],
+        chosen_id=decision.id,
+        chosen_name=decision.name,
+        chosen_type="file" if decision.action == "select_file" else "folder",
+        reason=decision.reason,
+        alternatives=[c.name for c in state.candidates if c.id != decision.id],
     )
 
-    updates = {"decision_trace": state.decision_trace + [trace]}
+    updates = {
+        "decision_trace": state.decision_trace + [trace],
+        "selected_file": False,
+        "stop_navigation": False
+    }
 
-    if action == "select_file":
+    # ✅ Action: select file
+    if decision.action == "select_file":
         updates.update({
             "current_file": FoundFile(
-                id=chosen_id,
-                name=chosen_name,
-                path=state.current_path + "/" + chosen_name
+                id=decision.id,
+                name=decision.name,
+                path=f"{state.current_path}/{decision.name}"
             ),
-            "done": True
+            "selected_file": True
         })
-    else:
+        return updates
+
+    # ✅ Action: enter folder
+    if decision.action == "enter_folder":
         updates.update({
-            "current_item_id": chosen_id,
-            "current_path": state.current_path + "/" + chosen_name,
+            "current_item_id": decision.id,
+            "current_path": f"{state.current_path}/{decision.name}",
             "depth": state.depth + 1
         })
+        return updates
 
+    # ✅ Action: stop
+    updates["stop_navigation"] = True
     return updates
+
+
+
+def build_relevance_prompt(state: AgentState, content: str) -> str:
+    return f"""
+You are evaluating whether a file matches the user's search intent. Based on the user's query, file name, path, and content, you will assign a **relevance score**.
+
+User query:
+\"{state.user_query}\"
+
+File name:
+\"{state.current_file.name}\"
+
+File path:
+\"{state.current_file.path}\"
+
+File content (first 2000 characters):
+{content[:2000]}
+
+You must return **STRICT JSON ONLY** in this exact format:
+
+{{
+  "score": <0.0, 0.5, or 1.0>,
+  "reason": "<explanation of your score>",
+  "is_match": <true or false>
+}}
+
+### SCORING GUIDELINES (interpret these carefully):
+Assign one of these three scores based on how well the file matches the query:
+
+1. **1.0 — Highly Relevant**
+   • The file clearly contains strong evidence that it fulfills the user's search intent, such as:
+     - The query terms appear in the **file name** or **file path**  
+       AND the **content** meaningfully discusses or answers the query.  
+   • Typical indicators include direct textual matches to key query phrases or highly relevant context.
+
+2. **0.5 — Moderately Relevant**
+   • Some signals of relevance exist but are incomplete or only moderately aligned, such as:
+     - Query terms appear only in the content (not name/path),  
+     - The context relates to the topic but not strongly or fully.
+
+3. **0.0 — Not Relevant**
+   • No meaningful evidence of relevance in the file name, path, or content.
+   • The content does not answer, mention, or meaningfully relate to the query.
+
+### OUTPUT RULES:
+• **score** must be exactly 0.0, 0.5, or 1.0.  
+• **is_match** should be `true` if score is **1.0 or 0.5** (moderate or high relevance), otherwise `false`.  
+• **reason** should briefly explain which signals you used to determine the score.
+
+Return JSON only — no extra text outside the JSON object.
+"""
 
 
 
@@ -190,30 +289,51 @@ def download_and_verify(state: AgentState, config):
     if not state.current_file:
         return {}
 
+    # Download file
     file_bytes = graph_client.download_file(state.current_file.id)
     md_text = file_bytes.decode("utf-8", errors="ignore")
 
-    verified = "resume" in md_text.lower()
+    # LLM relevance scoring
+    llm = ChatOpenAI(model=OPENAI_MODEL, temperature=0)
 
-    if verified:
+    extractor = create_extractor(
+        llm,
+        tools=[FileRelevance],
+        tool_choice="FileRelevance"
+    )
+
+    relevance: FileRelevance = extractor.invoke(
+        input=build_relevance_prompt(state, md_text)
+    ).get("responses", [None])[0]
+
+    # Fail-safe: if LLM returns nothing
+    if relevance is None:
+        relevance = FileRelevance(
+            score=0.0,
+            reason="LLM returned no structured output",
+            is_match=False
+        )
+
+    # ✅ If file is relevant
+    if relevance.is_match:
         return {
             "verified": True,
             "done": True,
-            "current_file": state.current_file.copy(
-                update={"content_md": md_text}
+            "current_file": state.current_file.model_copy(
+                update={"relevance": relevance}
             ),
         }
 
+    # ❌ If file is NOT relevant
     return {
         "verified": False,
         "attempt": state.attempt + 1,
         "current_file": None,
-        "rejected_paths": state.rejected_paths
-        + [
+        "rejected_paths": state.rejected_paths + [
             RejectedPath(
                 path=state.current_path,
                 file_name=state.current_file.name,
-                rejection_reason="Content mismatch",
+                rejection_reason=f"Content mismatch: {relevance.reason}",
             )
         ],
     }
@@ -235,14 +355,19 @@ def build_agent_graph():
     graph.add_edge("resolve_start", "list_children")
     graph.add_edge("list_children", "decide_next")
 
-    graph.add_conditional_edges(
-        "decide_next",
-        lambda s: "download_and_verify" if s.done else "list_children",
-    )
+    def route(state: AgentState):
+        if state.selected_file:
+            return "download_and_verify"
+        if state.stop_navigation:
+            return END
+        return "list_children"
+
+    graph.add_conditional_edges("decide_next", route)
 
     graph.add_edge("download_and_verify", END)
 
     return graph.compile()
+
 
 
 # -----------------------
@@ -250,12 +375,12 @@ def build_agent_graph():
 # -----------------------
 
 from src.utils.token_manager import TokenManager
-# access_token = TokenManager().refresh_access_token()
-access_token = TokenManager().get_access_token()
+access_token = TokenManager().refresh_access_token()
+# access_token = TokenManager().get_access_token()
 client = GraphClient(access_token)
 
 initial_state = AgentState(
-    user_query="find my test, which I believe is in txt format",
+    user_query="find my test.txt which is within the test folder not in root",
     drive_description="Files organized by Work, Personal, Education"
 )
 
@@ -268,7 +393,21 @@ final = agent_graph.invoke(
         }
     }
 )
-print(final)
+
+pprint.pprint(final)
 
 # print(final.current_file)
 # print([d.dict() for d in final.decision_trace])
+
+import json
+def pydantic_encoder(obj):
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump()
+    elif hasattr(obj, "dict"):
+        return obj.dict()
+    else:
+        return str(obj)
+
+with open("src/agent/final_state.json", "w") as f:
+    json.dump(final, f, indent=4, default=pydantic_encoder)
+
