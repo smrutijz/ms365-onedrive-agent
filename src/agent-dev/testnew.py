@@ -4,7 +4,7 @@ from src.utils.token_manager import TokenManager
 import os
 import json
 
-access_token = TokenManager().refresh_access_token()
+# access_token = TokenManager().refresh_access_token()
 access_token = TokenManager().get_access_token()
 
 
@@ -25,5 +25,11 @@ print(requests.get(
 
 
 client.download_file("9509D56FD07A9FEF!s90f607c805a64a84bbb521909ffe77ca")
+res=client.get_item("9509D56FD07A9FEF!s90f607c805a64a84bbb521909ffe77ca")
+res.get("file").get("mimeType") if res.get("file") else None
+
+with open("src/agent-dev/y.json", "w") as f:
+    json.dump(y, f, indent=4)
+
 
 

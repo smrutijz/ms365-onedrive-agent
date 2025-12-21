@@ -1,149 +1,44 @@
 {
-    "user_query": "find my test, which I believe is in txt format",
-    "drive_description": "Files organized by Work, Personal, Education",
-    "max_attempts": 3,
-    "current_item_id": "root",
-    "current_path": "",
-    "depth": 0,
-    "attempt": 1,
-    "done": true,
-    "verified": false,
-    "visited_items": [],
-    "rejected_paths": [],
-    "candidates": [
-        {
-            "id": "9509D56FD07A9FEF!s15e6663862cf4bcbae3457a45a218cfd",
-            "name": "01 Resume",
-            "type": "folder",
-            "mime_type": null,
-            "parent_reference_path": "",
-            "raw": {}
-        },
-        {
-            "id": "9509D56FD07A9FEF!s5647bdaf52bc4806a1434a6f9f96f40f",
-            "name": "Attachments",
-            "type": "folder",
-            "mime_type": null,
-            "parent_reference_path": "",
-            "raw": {}
-        },
-        {
-            "id": "9509D56FD07A9FEF!se92e6b785cf7422297b89bbfcf6fb47f",
-            "name": "Documents",
-            "type": "folder",
-            "mime_type": null,
-            "parent_reference_path": "",
-            "raw": {}
-        },
-        {
-            "id": "9509D56FD07A9FEF!s898a5775c2ee4e96898eeba6ab125bd0",
-            "name": "Personal Vault",
-            "type": "file",
-            "mime_type": null,
-            "parent_reference_path": "",
-            "raw": {}
-        },
-        {
-            "id": "9509D56FD07A9FEF!se782c76d84c44ac794b5be6f8780cda4",
-            "name": "Pictures",
-            "type": "folder",
-            "mime_type": null,
-            "parent_reference_path": "",
-            "raw": {}
-        },
-        {
-            "id": "9509D56FD07A9FEF!sd5464e92bfd34456aa2a2ee4897f98da",
-            "name": "Dispute+Form.pdf",
-            "type": "file",
-            "mime_type": "application/pdf",
-            "parent_reference_path": "",
-            "raw": {}
-        },
-        {
-            "id": "9509D56FD07A9FEF!s9ff4ce5a7f704d19be0278eedce0a5ba",
-            "name": "find-my-sound_ghijkl-1.pdf",
-            "type": "file",
-            "mime_type": "application/pdf",
-            "parent_reference_path": "",
-            "raw": {}
-        },
-        {
-            "id": "9509D56FD07A9FEF!saea6ae439aad458ca0cca86efa8793a4",
-            "name": "Getting started with OneDrive.pdf",
-            "type": "file",
-            "mime_type": "application/pdf",
-            "parent_reference_path": "",
-            "raw": {}
-        },
-        {
-            "id": "9509D56FD07A9FEF!s358a7b15aa554d42891f4b0ea22cab31",
-            "name": "IMG_1263.PNG",
-            "type": "file",
-            "mime_type": "image/png",
-            "parent_reference_path": "",
-            "raw": {}
-        },
-        {
-            "id": "9509D56FD07A9FEF!s22b9d5a285724f42b751ab761cc89d1f",
-            "name": "ITR1_AY 2021-22_V1.8.xlsm",
-            "type": "file",
-            "mime_type": "application/vnd.ms-excel.sheet.macroEnabled.12",
-            "parent_reference_path": "",
-            "raw": {}
-        },
-        {
-            "id": "9509D56FD07A9FEF!s456d3879eea04627b1a2c87342b1aaee",
-            "name": "Screenshot 2024-07-06 at 20.01.16.png",
-            "type": "file",
-            "mime_type": "image/png",
-            "parent_reference_path": "",
-            "raw": {}
-        },
-        {
-            "id": "9509D56FD07A9FEF!s90f607c805a64a84bbb521909ffe77ca",
-            "name": "test.txt",
-            "type": "file",
-            "mime_type": "text/plain",
-            "parent_reference_path": "",
-            "raw": {}
-        },
-        {
-            "id": "9509D56FD07A9FEF!sc54814ccfc264c00bdcfbaa7453d39ac",
-            "name": "That_s_Wild_presents_The_Secret_World_of_Fungi__1764900650.pdf",
-            "type": "file",
-            "mime_type": "application/pdf",
-            "parent_reference_path": "",
-            "raw": {}
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('smrutijz%40outlook.com')/drive/items/$entity",
+    "@microsoft.graph.downloadUrl": "https://my.microsoftpersonalcontent.com/personal/9509d56fd07a9fef/_layouts/15/download.aspx?UniqueId=90f607c8-05a6-4a84-bbb5-21909ffe77ca&Translate=false&tempauth=v1e.eyJzaXRlaWQiOiI0MzI0OWU0NS1kNjRjLTQwYzctYWNmNy0xNzgzMjZhNDQ0YmIiLCJhcHBfZGlzcGxheW5hbWUiOiJQZXJzb25hbE9uZURyaXZlQWdlbnQiLCJhcHBpZCI6ImM4MjkyYTk4LTEwMjUtNDM3ZS05NDdiLTIxNjc5ZDcxZmJhMCIsImF1ZCI6IjAwMDAwMDAzLTAwMDAtMGZmMS1jZTAwLTAwMDAwMDAwMDAwMC9teS5taWNyb3NvZnRwZXJzb25hbGNvbnRlbnQuY29tQDkxODgwNDBkLTZjNjctNGM1Yi1iMTEyLTM2YTMwNGI2NmRhZCIsImV4cCI6IjE3NjYzMDEzOTEifQ.RFPr-QAwq42OVeJsuvO4eeufOxV7zLbg6nXT0ntNsTBWBDufLZuU6tQsU7ZmSGJ_E8X0gcg4Kq5qgEbvXOTcUQpw4PiL5AZyYBeF2GiqJAt9N-yvVQEgdx39wo9MYY0r_y3h0k6t5xQwDFSpH6_a1RmNcTw_Ygl0b06kMzEuao9Uy04He82MgI1IZMvMivO0gp9_DEHOT66dd5Wq2cXq2Ug605nJvnPzKXmtBFU0YXwh9jMjyIV-0rgAmwQej2rcIOEPXNo5xjcLWrNWOumnL4QW8jhyYJgzzi8KiuJDDmSSrz7SOtMea7JxnqXWjzNF6gJLxkBPPWIYEkkZIiNCSHdHXS03CcfAupbHb_5Fz_fVQXvoed36pFapETJULEl-WasT3AN1pJbL12omBeBIDwWxUEvecqgtdcymA-T6GzVtNyaBAndOddVWLcyWOzL8.coLBqySUibIXec_9EsQ3bNEwDDphmaz6KqtoUUgQWPs&ApiVersion=2.0",
+    "createdDateTime": "2025-12-15T15:21:00Z",
+    "eTag": "\"{90F607C8-05A6-4A84-BBB5-21909FFE77CA},1\"",
+    "id": "9509D56FD07A9FEF!s90f607c805a64a84bbb521909ffe77ca",
+    "lastModifiedDateTime": "2025-12-15T15:21:00Z",
+    "name": "test.txt",
+    "webUrl": "https://onedrive.live.com?cid=9509d56fd07a9fef&id=9509D56FD07A9FEF!s90f607c805a64a84bbb521909ffe77ca",
+    "cTag": "\"c:{90F607C8-05A6-4A84-BBB5-21909FFE77CA},1\"",
+    "size": 4,
+    "createdBy": {
+        "user": {
+            "email": "smrutijz@outlook.com",
+            "id": "9509d56fd07a9fef",
+            "displayName": "Smruti Ranjan Satpathy"
         }
-    ],
-    "decision_trace": [
-        {
-            "attempt": 1,
-            "depth": 0,
-            "chosen_id": "9509D56FD07A9FEF!s90f607c805a64a84bbb521909ffe77ca",
-            "chosen_name": "test.txt",
-            "chosen_type": "file",
-            "reason": "The user requested a test file in txt format, and 'test.txt' matches this description.",
-            "alternatives": [
-                "01 Resume",
-                "Attachments",
-                "Documents",
-                "Personal Vault",
-                "Pictures",
-                "Dispute+Form.pdf",
-                "find-my-sound_ghijkl-1.pdf",
-                "Getting started with OneDrive.pdf",
-                "IMG_1263.PNG",
-                "ITR1_AY 2021-22_V1.8.xlsm",
-                "Screenshot 2024-07-06 at 20.01.16.png",
-                "That_s_Wild_presents_The_Secret_World_of_Fungi__1764900650.pdf"
-            ]
+    },
+    "lastModifiedBy": {
+        "user": {
+            "email": "smrutijz@outlook.com",
+            "id": "9509d56fd07a9fef",
+            "displayName": "Smruti Ranjan Satpathy"
         }
-    ],
-    "current_file": {
-        "id": "9509D56FD07A9FEF!s90f607c805a64a84bbb521909ffe77ca",
-        "name": "test.txt",
-        "path": "/test.txt",
-        "content_md": null
+    },
+    "parentReference": {
+        "driveType": "personal",
+        "driveId": "9509d56fd07a9fef",
+        "id": "9509D56FD07A9FEF!sea8cc6beffdb43d7976fbc7da445c639",
+        "name": "Documents",
+        "path": "/drive/root:",
+        "siteId": "43249e45-d64c-40c7-acf7-178326a444bb"
+    },
+    "file": {
+        "mimeType": "text/plain",
+        "hashes": {
+            "quickXorHash": "dCjDHOgAAAAAAAAABAAAAAAAAAA="
+        }
+    },
+    "fileSystemInfo": {
+        "createdDateTime": "2025-12-15T15:21:00Z",
+        "lastModifiedDateTime": "2025-12-15T15:21:00Z"
     }
 }
