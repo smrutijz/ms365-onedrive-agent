@@ -15,20 +15,99 @@ mimetype = res.get("file").get("mimeType") if res.get("file") else None
 
 
 
-# content = b'test'
-# name="test.txt"
-# mimetype="text/plain"
+content = b'test'
+name="test.txt"
+mimetype="text/plain"
+type(content)
 
 import requests
 import time
 
 BASE = "https://wap-apac-smrutiaisolution-docling-b3heeeadera9apa7.eastasia-01.azurewebsites.net"
 
-def convert_file_async(file_bytes, filename, mimetype):
-    files = [("files", (filename, file_bytes, mimetype))]
-    data = [("to_formats", "json"), ("to_formats", "md")]
 
-    resp = requests.post(f"{BASE}/v1/convert/file/async", files=files, data=data)
+
+import requests
+
+BASE = "https://wap-apac-smrutiaisolution-docling-b3heeeadera9apa7.eastasia-01.azurewebsites.net/v1/convert/file"
+
+
+# Fake file content
+fake_file = b"test"
+
+files = {
+    "files": ("example.txt", fake_file, "text/plain")
+}
+
+data = {
+    "target_type": "inbody",
+    "from_formats": "md",
+    "to_formats": "md"
+}
+
+resp = requests.post(
+    BASE,
+    files=files,
+    data=data
+)
+
+print(resp.status_code)
+print(resp.json())
+resp.text
+resp.raise_for_status()
+
+
+
+
+
+
+import requests
+
+BASE = "https://wap-apac-smrutiaisolution-docling-b3heeeadera9apa7.eastasia-01.azurewebsites.net"
+
+fake_file = b"test"
+
+files = {
+    "files": ("example.txt", fake_file, "text/plain")
+}
+
+data = {
+    "from_formats": "md",
+    "to_formats": "md",
+    "target_type": "inbody"
+}
+
+# Step 1: submit async job
+resp = requests.post(
+    f"{BASE}/v1/convert/file/async",
+    files=files,
+    data=data
+)
+
+task = resp.json()
+task_id = task["task_id"]
+print("Task ID:", task_id)
+
+# Step 2: poll result
+import time
+while True:
+    r = requests.get(f"{BASE}/v1/convert/file/result/{task_id}")
+    if r.status_code == 200:
+        print("DONE:", r.json())
+        break
+    print("Waiting...")
+    time.sleep(1)
+
+
+
+
+
+
+def convert_file_async(file_bytes, filename, mimetype):
+    # files = [("files", (filename, file_bytes, mimetype))]
+    # data = [("to_formats", "json"), ("to_formats", "md")]
+    # resp = requests.post(f"{BASE}/v1/convert/file/async", files=files, data=data)
+    resp = requests.post(f"{BASE}/v1/convert/file/async", json=content)
     resp.raise_for_status()
     return resp.json()["task_id"]
 
