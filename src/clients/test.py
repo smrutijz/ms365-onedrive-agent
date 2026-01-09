@@ -27,17 +27,26 @@ BASE = "https://wap-apac-smrutiaisolution-docling-b3heeeadera9apa7.eastasia-01.a
 
 
 
+
 import requests
 
-BASE = "https://wap-apac-smrutiaisolution-docling-b3heeeadera9apa7.eastasia-01.azurewebsites.net/v1/convert/file"
+files = [('files', open('requirements.txt', 'rb'))]
 
+res = requests.post("http://localhost:5001/process-file", files=files)
+print(res.json())
+
+
+
+
+
+import requests
+
+BASE = "http://localhost:5001/v1/convert/file"
 
 # Fake file content
 fake_file = b"test"
 
-files = {
-    "files": ("example.txt", fake_file, "text/plain")
-}
+files = [("example", fake_file)]
 
 data = {
     "target_type": "inbody",
@@ -47,7 +56,7 @@ data = {
 
 resp = requests.post(
     BASE,
-    files=files,
+    files=[fake_file],
     data=data
 )
 
@@ -56,6 +65,10 @@ print(resp.json())
 resp.text
 resp.raise_for_status()
 
+task = resp.json()
+task_id = task["task_id"]
+print("Task ID:", task_id)
+requests.get(f"{BASE}/v1/convert/file/result/{task_id}")
 
 
 
@@ -87,6 +100,7 @@ resp = requests.post(
 task = resp.json()
 task_id = task["task_id"]
 print("Task ID:", task_id)
+requests.get(f"{BASE}/v1/convert/file/result/{task_id}")
 
 # Step 2: poll result
 import time
