@@ -383,13 +383,3 @@ def list_versions(item_id: str, client: GraphClient = Depends(get_graph_client))
     """Return the version history of a file."""
     return client.list_versions(item_id)
 
-
-@app.post("/drive/items/{item_id}/versions/{version_id}/restore", tags=["Versions"])
-def restore_version(
-    item_id: str, version_id: str, client: GraphClient = Depends(get_graph_client)
-):
-    """Restore a file to a specific historical version."""
-    ok = client.restore_version(item_id, version_id)
-    if not ok:
-        raise HTTPException(status_code=500, detail="Version restore failed")
-    return {"restored": version_id}

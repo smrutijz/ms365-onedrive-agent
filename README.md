@@ -27,7 +27,7 @@ This service wraps the Microsoft Graph API and exposes all core OneDrive operati
 - Upload (simple and large file resumable), download, delete
 - Create folders, rename, move, copy items
 - Manage sharing links and permissions
-- View and restore file version history
+- View file version history
 - Multi-user JWT auth — each user logs in once, gets a Bearer token, uses it on every request
 
 ---
@@ -469,4 +469,3 @@ All `/drive/*` endpoints require: `Authorization: Bearer <jwt>`
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/drive/items/{item_id}/versions` | List version history of a file |
-| `POST` | `/drive/items/{item_id}/versions/{version_id}/restore` | Restore a previous version |

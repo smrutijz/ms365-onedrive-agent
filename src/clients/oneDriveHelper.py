@@ -408,16 +408,3 @@ class GraphClient:
         except requests.RequestException as e:
             logger.error(f"Failed to list versions for '{item_id}': {e}")
             return []
-
-    def restore_version(self, item_id: str, version_id: str) -> bool:
-        """Restore a file to a specific historical version."""
-        try:
-            resp = self.session.post(
-                f"{self.base_url}/me/drive/items/{item_id}/versions/{version_id}/restoreVersion",
-                timeout=self.timeout,
-            )
-            resp.raise_for_status()
-            return True
-        except requests.RequestException as e:
-            logger.error(f"Failed to restore version '{version_id}': {e}")
-            return False
