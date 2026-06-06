@@ -121,13 +121,17 @@ def callback(request: Request):
         )
 
     # Pull user's email from Microsoft
-    me = requests.get(
+    me_resp = requests.get(
         "https://graph.microsoft.com/v1.0/me",
         headers={"Authorization": f"Bearer {token['access_token']}"},
-    ).json()
+    )
+    me = me_resp.json()
     email = me.get("mail") or me.get("userPrincipalName")
     if not email:
-        raise HTTPException(status_code=400, detail="Could not retrieve email from Microsoft")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not retrieve email from Microsoft: {me}",
+        )
 
     # Store OneDrive tokens per user in Key Vault
     token_manager.store_tokens(email, token)
