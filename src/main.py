@@ -1,21 +1,54 @@
-import time
+import datetime
 import requests
-from fastapi import FastAPI, Request, UploadFile, File, HTTPException
+import jwt
+from fastapi import FastAPI, Request, UploadFile, File, HTTPException, Depends
 from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional
 from src.core.config import settings
-from src.utils.keyvault import KeyVaultClient
 from src.utils.token_manager import token_manager
 from src.clients.oneDriveHelper import GraphClient
 
 app = FastAPI(title="MS365 OneDrive API")
+security = HTTPBearer()
+
+JWT_EXPIRY_DAYS = 7
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
+# ── Auth helpers ───────────────────────────────────────────────────────────────
 
-def graph() -> GraphClient:
-    return GraphClient(token_manager.get_access_token())
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> str:
+    """Validate Bearer JWT and return the user's email."""
+    try:
+        payload = jwt.decode(
+            credentials.credentials, settings.JWT_SECRET, algorithms=["HS256"]
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired — login again at /login")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    email = payload.get("email")
+    version = payload.get("v")
+
+    if not email:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    # Version check — if user logged in again this token is dead
+    if version != token_manager.get_token_version(email):
+        raise HTTPException(status_code=401, detail="Token revoked — login again at /login")
+
+    return email
+
+
+def get_graph_client(email: str = Depends(get_current_user)) -> GraphClient:
+    try:
+        return GraphClient(token_manager.get_access_token(email))
+    except RuntimeError as e:
+        raise HTTPException(status_code=401, detail=str(e))
 
 
 # ── Request bodies ─────────────────────────────────────────────────────────────
@@ -57,7 +90,16 @@ def login():
 
 @app.get("/callback", tags=["Auth"])
 def callback(request: Request):
-    """OAuth callback — exchanges auth code for tokens and stores them in Key Vault."""
+    """
+    OAuth callback. After Microsoft login this endpoint:
+    1. Exchanges the auth code for OneDrive tokens
+    2. Fetches the user's email from /me
+    3. Stores tokens in Key Vault under that email
+    4. Returns a signed JWT Bearer token
+
+    Use the returned access_token as: Authorization: Bearer <token>
+    on all /drive/* endpoints. Login again at /login to get a new token.
+    """
     code = request.query_params.get("code")
     if not code:
         return {"error": "missing code"}
@@ -73,85 +115,114 @@ def callback(request: Request):
 
     token = requests.post(settings.TOKEN_URL, data=data).json()
     if "access_token" not in token:
-        raise HTTPException(status_code=400, detail=token.get("error_description", "Token exchange failed"))
-    kv = KeyVaultClient()
-    expires_at = str(int(time.time()) + token.get("expires_in", 3600))
-    kv.set_secret("onedrive-access-token", token["access_token"])
-    kv.set_secret("onedrive-refresh-token", token["refresh_token"])
-    kv.set_secret("onedrive-token-expiry", expires_at)
-    return {"status": "tokens stored"}
+        raise HTTPException(
+            status_code=400,
+            detail=token.get("error_description", "Token exchange failed"),
+        )
+
+    # Pull user's email from Microsoft
+    me = requests.get(
+        "https://graph.microsoft.com/v1.0/me",
+        headers={"Authorization": f"Bearer {token['access_token']}"},
+    ).json()
+    email = me.get("mail") or me.get("userPrincipalName")
+    if not email:
+        raise HTTPException(status_code=400, detail="Could not retrieve email from Microsoft")
+
+    # Store OneDrive tokens per user in Key Vault
+    token_manager.store_tokens(email, token)
+
+    # Increment version — all old JWTs for this user are now invalid
+    version = token_manager.increment_token_version(email)
+
+    # Issue signed JWT
+    bearer = jwt.encode(
+        {
+            "email": email,
+            "v": version,
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=JWT_EXPIRY_DAYS),
+        },
+        settings.JWT_SECRET,
+        algorithm="HS256",
+    )
+
+    return {
+        "access_token": bearer,
+        "token_type": "bearer",
+        "expires_in_days": JWT_EXPIRY_DAYS,
+        "user": email,
+    }
 
 
 # ── Drive ──────────────────────────────────────────────────────────────────────
 
 @app.get("/drive", tags=["Drive"])
-def drive_info():
+def drive_info(client: GraphClient = Depends(get_graph_client)):
     """Return drive metadata including storage quota."""
-    return graph().get_drive_info()
+    return client.get_drive_info()
 
 
 # ── Browse ─────────────────────────────────────────────────────────────────────
 
 @app.get("/drive/root", tags=["Browse"])
-def root():
+def root(client: GraphClient = Depends(get_graph_client)):
     """List files and folders at the OneDrive root."""
-    return graph().list_root()
+    return client.list_root()
 
 
 @app.get("/drive/folder/{folder_id}", tags=["Browse"])
-def folder(folder_id: str):
+def folder(folder_id: str, client: GraphClient = Depends(get_graph_client)):
     """List contents of a folder by item ID."""
-    return graph().list_folder(folder_id)
+    return client.list_folder(folder_id)
 
 
 @app.get("/drive/folder-by-path", tags=["Browse"])
-def folder_by_path(path: str):
+def folder_by_path(path: str, client: GraphClient = Depends(get_graph_client)):
     """List contents of a folder by path, e.g. path=/Documents/Work."""
-    return graph().list_folder_by_path(path)
+    return client.list_folder_by_path(path)
 
 
 # ── Item metadata ──────────────────────────────────────────────────────────────
 
 @app.get("/drive/items/{item_id}", tags=["Items"])
-def get_item(item_id: str):
+def get_item(item_id: str, client: GraphClient = Depends(get_graph_client)):
     """Get full metadata for an item by its ID."""
-    return graph().get_item(item_id)
+    return client.get_item(item_id)
 
 
 @app.get("/drive/item-by-path", tags=["Items"])
-def get_item_by_path(path: str):
+def get_item_by_path(path: str, client: GraphClient = Depends(get_graph_client)):
     """Get full metadata for an item by path, e.g. path=/Documents/file.pdf."""
-    return graph().get_item_by_path(path)
+    return client.get_item_by_path(path)
 
 
 # ── Search ─────────────────────────────────────────────────────────────────────
 
 @app.get("/drive/search", tags=["Search"])
-def search(q: str):
+def search(q: str, client: GraphClient = Depends(get_graph_client)):
     """Search OneDrive for files/folders matching the query string."""
-    return graph().search(q)
+    return client.search(q)
 
 
 # ── Recent & Shared ────────────────────────────────────────────────────────────
 
 @app.get("/drive/recent", tags=["Discovery"])
-def recent():
+def recent(client: GraphClient = Depends(get_graph_client)):
     """Return files recently accessed by the signed-in user."""
-    return graph().get_recent()
+    return client.get_recent()
 
 
 @app.get("/drive/shared-with-me", tags=["Discovery"])
-def shared_with_me():
+def shared_with_me(client: GraphClient = Depends(get_graph_client)):
     """Return items shared with the signed-in user."""
-    return graph().get_shared_with_me()
+    return client.get_shared_with_me()
 
 
 # ── Download ───────────────────────────────────────────────────────────────────
 
 @app.get("/drive/items/{item_id}/download", tags=["Download"])
-def download(item_id: str):
+def download(item_id: str, client: GraphClient = Depends(get_graph_client)):
     """Download a file's content by its item ID."""
-    client = graph()
     filename = client.get_item(item_id).get("name", item_id)
     data = client.download_file(item_id)
     if data is None:
@@ -164,9 +235,9 @@ def download(item_id: str):
 
 
 @app.get("/drive/items/{item_id}/download-url", tags=["Download"])
-def download_url(item_id: str):
+def download_url(item_id: str, client: GraphClient = Depends(get_graph_client)):
     """Return a short-lived direct download URL for a file."""
-    url = graph().get_download_url(item_id)
+    url = client.get_download_url(item_id)
     if not url:
         raise HTTPException(status_code=404, detail="Download URL not available")
     return {"download_url": url}
@@ -175,31 +246,32 @@ def download_url(item_id: str):
 # ── Upload ─────────────────────────────────────────────────────────────────────
 
 @app.post("/drive/upload", tags=["Upload"])
-async def upload(path: str, file: UploadFile = File(...)):
-    """
-    Upload a file (≤4 MB) to the given OneDrive path.
-    For files >4 MB use /drive/upload-large instead.
-    path query param format: /Documents/report.pdf
-    """
+async def upload(
+    path: str,
+    file: UploadFile = File(...),
+    client: GraphClient = Depends(get_graph_client),
+):
+    """Upload a file (≤4 MB). path format: /Documents/report.pdf"""
     if not path.startswith("/"):
         path = f"/{path}"
     content = await file.read()
-    result = graph().upload_file(path, content)
+    result = client.upload_file(path, content)
     if result is None:
         raise HTTPException(status_code=500, detail="Upload failed")
     return result
 
 
 @app.post("/drive/upload-large", tags=["Upload"])
-async def upload_large(path: str, file: UploadFile = File(...)):
-    """
-    Resumable chunked upload for files larger than 4 MB.
-    path query param format: /Documents/large_video.mp4
-    """
+async def upload_large(
+    path: str,
+    file: UploadFile = File(...),
+    client: GraphClient = Depends(get_graph_client),
+):
+    """Resumable chunked upload for files larger than 4 MB."""
     if not path.startswith("/"):
         path = f"/{path}"
     content = await file.read()
-    result = graph().upload_large_file(path, content)
+    result = client.upload_large_file(path, content)
     if result is None:
         raise HTTPException(status_code=500, detail="Large file upload failed")
     return result
@@ -208,12 +280,11 @@ async def upload_large(path: str, file: UploadFile = File(...)):
 # ── Create folder ──────────────────────────────────────────────────────────────
 
 @app.post("/drive/folders", tags=["Folders"])
-def create_folder(body: CreateFolderBody):
-    """
-    Create a new folder.
-    If parent_id is omitted, the folder is created at the drive root.
-    """
-    result = graph().create_folder(body.name, body.parent_id)
+def create_folder(
+    body: CreateFolderBody, client: GraphClient = Depends(get_graph_client)
+):
+    """Create a new folder. If parent_id is omitted, creates at drive root."""
+    result = client.create_folder(body.name, body.parent_id)
     if result is None:
         raise HTTPException(status_code=500, detail="Folder creation failed")
     return result
@@ -222,39 +293,42 @@ def create_folder(body: CreateFolderBody):
 # ── Rename / Move / Copy / Delete ──────────────────────────────────────────────
 
 @app.patch("/drive/items/{item_id}/rename", tags=["Items"])
-def rename_item(item_id: str, body: RenameBody):
+def rename_item(
+    item_id: str, body: RenameBody, client: GraphClient = Depends(get_graph_client)
+):
     """Rename a file or folder."""
-    result = graph().rename_item(item_id, body.new_name)
+    result = client.rename_item(item_id, body.new_name)
     if result is None:
         raise HTTPException(status_code=500, detail="Rename failed")
     return result
 
 
 @app.patch("/drive/items/{item_id}/move", tags=["Items"])
-def move_item(item_id: str, body: MoveBody):
+def move_item(
+    item_id: str, body: MoveBody, client: GraphClient = Depends(get_graph_client)
+):
     """Move an item to a different folder, optionally renaming it."""
-    result = graph().move_item(item_id, body.new_parent_id, body.new_name)
+    result = client.move_item(item_id, body.new_parent_id, body.new_name)
     if result is None:
         raise HTTPException(status_code=500, detail="Move failed")
     return result
 
 
 @app.post("/drive/items/{item_id}/copy", tags=["Items"])
-def copy_item(item_id: str, body: CopyBody):
-    """
-    Copy an item to a different folder.
-    Returns an async monitor URL to poll for completion.
-    """
-    monitor_url = graph().copy_item(item_id, body.new_parent_id, body.new_name)
+def copy_item(
+    item_id: str, body: CopyBody, client: GraphClient = Depends(get_graph_client)
+):
+    """Copy an item. Returns async monitor URL for completion status."""
+    monitor_url = client.copy_item(item_id, body.new_parent_id, body.new_name)
     if not monitor_url:
         raise HTTPException(status_code=500, detail="Copy failed")
     return {"monitor_url": monitor_url}
 
 
 @app.delete("/drive/items/{item_id}", tags=["Items"])
-def delete_item(item_id: str):
+def delete_item(item_id: str, client: GraphClient = Depends(get_graph_client)):
     """Permanently delete a file or folder."""
-    ok = graph().delete_item(item_id)
+    ok = client.delete_item(item_id)
     if not ok:
         raise HTTPException(status_code=500, detail="Delete failed")
     return {"deleted": item_id}
@@ -263,36 +337,36 @@ def delete_item(item_id: str):
 # ── Thumbnails ─────────────────────────────────────────────────────────────────
 
 @app.get("/drive/items/{item_id}/thumbnails", tags=["Thumbnails"])
-def thumbnails(item_id: str):
+def thumbnails(item_id: str, client: GraphClient = Depends(get_graph_client)):
     """Return available thumbnail sizes for an item."""
-    return graph().get_thumbnails(item_id)
+    return client.get_thumbnails(item_id)
 
 
 # ── Sharing / Permissions ──────────────────────────────────────────────────────
 
 @app.post("/drive/items/{item_id}/share", tags=["Sharing"])
-def create_share_link(item_id: str, body: ShareLinkBody):
-    """
-    Create a sharing link for an item.
-    link_type: 'view' | 'edit' | 'embed'
-    scope: 'anonymous' | 'organization'
-    """
-    result = graph().create_share_link(item_id, body.link_type, body.scope)
+def create_share_link(
+    item_id: str, body: ShareLinkBody, client: GraphClient = Depends(get_graph_client)
+):
+    """Create a sharing link. link_type: view|edit|embed, scope: anonymous|organization"""
+    result = client.create_share_link(item_id, body.link_type, body.scope)
     if result is None:
         raise HTTPException(status_code=500, detail="Share link creation failed")
     return result
 
 
 @app.get("/drive/items/{item_id}/permissions", tags=["Sharing"])
-def list_permissions(item_id: str):
+def list_permissions(item_id: str, client: GraphClient = Depends(get_graph_client)):
     """List all current permissions (shares) on an item."""
-    return graph().list_permissions(item_id)
+    return client.list_permissions(item_id)
 
 
 @app.delete("/drive/items/{item_id}/permissions/{permission_id}", tags=["Sharing"])
-def remove_permission(item_id: str, permission_id: str):
+def remove_permission(
+    item_id: str, permission_id: str, client: GraphClient = Depends(get_graph_client)
+):
     """Revoke a specific permission from an item."""
-    ok = graph().remove_permission(item_id, permission_id)
+    ok = client.remove_permission(item_id, permission_id)
     if not ok:
         raise HTTPException(status_code=500, detail="Permission removal failed")
     return {"removed": permission_id}
@@ -301,15 +375,17 @@ def remove_permission(item_id: str, permission_id: str):
 # ── Version history ────────────────────────────────────────────────────────────
 
 @app.get("/drive/items/{item_id}/versions", tags=["Versions"])
-def list_versions(item_id: str):
+def list_versions(item_id: str, client: GraphClient = Depends(get_graph_client)):
     """Return the version history of a file."""
-    return graph().list_versions(item_id)
+    return client.list_versions(item_id)
 
 
 @app.post("/drive/items/{item_id}/versions/{version_id}/restore", tags=["Versions"])
-def restore_version(item_id: str, version_id: str):
+def restore_version(
+    item_id: str, version_id: str, client: GraphClient = Depends(get_graph_client)
+):
     """Restore a file to a specific historical version."""
-    ok = graph().restore_version(item_id, version_id)
+    ok = client.restore_version(item_id, version_id)
     if not ok:
         raise HTTPException(status_code=500, detail="Version restore failed")
     return {"restored": version_id}

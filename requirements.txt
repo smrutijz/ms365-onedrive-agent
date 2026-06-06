@@ -8,3 +8,4 @@ pydantic
 pytest
 azure-identity
 azure-keyvault-secrets
+PyJWT

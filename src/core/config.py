@@ -19,7 +19,7 @@ class _Config:
 
     _REQUIRED = [
         "SP_APP_CLIENT_ID", "SP_APP_CLIENT_SECRET", "SP_APP_TENANT_ID", "KEY_VAULT_URL",
-        "GRAPH_APP_CLIENT_ID", "GRAPH_APP_CLIENT_SECRET",
+        "GRAPH_APP_CLIENT_ID", "GRAPH_APP_CLIENT_SECRET", "JWT_SECRET",
     ]
 
     def _load(self):
@@ -38,6 +38,9 @@ class _Config:
         self.GRAPH_APP_AUTHORITY_URL = os.getenv("GRAPH_APP_AUTHORITY_URL", "https://login.microsoftonline.com")
         self.GRAPH_APP_SCOPES = os.getenv("GRAPH_APP_SCOPES", "Files.ReadWrite offline_access")
         self.GRAPH_APP_REDIRECT_URI = os.getenv("GRAPH_APP_REDIRECT_URI", "http://localhost:8000/callback")
+
+        # JWT
+        self.JWT_SECRET = os.getenv("JWT_SECRET")
 
         missing = [k for k in self._REQUIRED if not getattr(self, k)]
         if missing:
