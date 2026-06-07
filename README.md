@@ -61,7 +61,7 @@ This service wraps the Microsoft Graph API and exposes core OneDrive and Outlook
 │  │                                                              │     │
 │  │  get_current_user()                                          │     │
 │  │    → decode & verify JWT signature (JWT_SECRET)             │     │
-│  │    → check token version vs Key Vault                       │     │
+│  │    → check expiry                                            │     │
 │  │    → return user email                                       │     │
 │  └──────────────────────────┬──────────────────────────────────┘     │
 │                             │ email                                   │
@@ -84,8 +84,8 @@ This service wraps the Microsoft Graph API and exposes core OneDrive and Outlook
 │  {key}-access-token │         │  via Microsoft Graph v1.0  │
 │  {key}-refresh-token│         └──────────────┬────────────┘
 │  {key}-token-expiry │                        │ Bearer token
-│  {key}-token-version│                        ▼
-└──────────┬──────────┘         ┌───────────────────────────┐
+└──────────┬──────────┘                        ▼
+           │                    ┌───────────────────────────┐
            │                    │   Microsoft Graph API      │
            ▼                    │  graph.microsoft.com/v1.0  │
 ┌─────────────────────┐         └───────────────────────────┘
@@ -159,16 +159,14 @@ Authorization: Bearer eyJ...
 API validates:
   1. Signature correct (JWT_SECRET)?
   2. Not expired (1 hour)?
-  3. Version matches Key Vault — i.e. user hasn't logged in again?
 ```
 
 **JWT payload:**
 ```json
-{ "email": "you@example.com", "v": 3, "exp": 1781342229 }
+{ "email": "you@example.com", "exp": 1781342229 }
 ```
 
 - `email` — identifies the user; used to look up their Graph tokens in Key Vault
-- `v` — token version; increments on every new login, immediately invalidating all older JWTs
 - `exp` — expiry timestamp (1 hour from issue)
 
 ### Layer 2 — Microsoft Graph tokens (OneDrive + Mail access)
@@ -180,7 +178,6 @@ Stored in Azure Key Vault per user:
   {email-key}-access-token    ← used to call Microsoft Graph API
   {email-key}-refresh-token   ← used to get new access tokens silently
   {email-key}-token-expiry    ← Unix timestamp when access token expires
-  {email-key}-token-version   ← current JWT version for this user
 ```
 
 `email-key` is the email with all non-alphanumeric characters replaced by hyphens:
@@ -199,8 +196,6 @@ Authorization: Bearer <jwt>
 ── JWT Validation ──────────────────────────────────────
   Decode JWT with JWT_SECRET
   Check exp → not expired?
-  Look up {email-key}-token-version in Key Vault
-  JWT v == KV version? → pass
             ↓
 ── Graph Token Fetch ───────────────────────────────────
   Read {email-key}-token-expiry from Key Vault
@@ -237,27 +232,18 @@ GRAPH_APP_SCOPES=User.Read Files.ReadWrite Mail.ReadWrite Mail.Send offline_acce
                     access_token for up to 90 days.
 ```
 
-### Token versioning — instant JWT revocation
-
-Every time a user hits `/login`, their `{email-key}-token-version` in Key Vault is incremented. The new JWT carries the new version number. Any previously issued JWT with an old version number is immediately rejected:
-
-```
-User logs in → version 1 → JWT v=1 issued
-User logs in again → version 2 → JWT v=2 issued
-Old JWT v=1 → 401 "Token revoked — login again at /login"
-```
-
-This means you can invalidate all sessions for a user by simply logging in again.
-
 ### When you need to log in again
 
 | Reason | What happens |
 |---|---|
 | First time setup | No tokens in Key Vault yet |
 | JWT expired | 1 hour has passed — get a new JWT at `/login` |
-| Logged in on another device | Old JWTs revoked by version increment |
 | Refresh token expired | 90 days of complete inactivity — Microsoft requires re-auth |
 | User revoked app permissions | Microsoft invalidates all tokens |
+
+Logging in again issues a brand-new JWT — it doesn't invalidate JWTs issued
+by previous logins, which simply expire on their own (within an hour, by
+default).
 
 ---
 
@@ -276,12 +262,10 @@ Key Vault secrets layout (example — two users):
 smrutijz-outlook-com-access-token
 smrutijz-outlook-com-refresh-token
 smrutijz-outlook-com-token-expiry
-smrutijz-outlook-com-token-version
 
 alice-contoso-com-access-token
 alice-contoso-com-refresh-token
 alice-contoso-com-token-expiry
-alice-contoso-com-token-version
 ```
 
 ---
@@ -305,7 +289,7 @@ ms365-onedrive-agent/
 │   ├── utils/
 │   │   ├── keyvault.py          Azure Key Vault client (get/set secrets)
 │   │   └── token_manager.py     Per-user token lifecycle — expiry check,
-│   │                            auto-refresh, versioning, singleton
+│   │                            auto-refresh, singleton
 │   └── clients/
 │       ├── oneDriveHelper.py    Microsoft Graph API wrapper —
 │       │                        all OneDrive operations
@@ -325,7 +309,7 @@ config (singleton, validates env vars at startup)
     ↓
 KeyVaultClient (Azure SDK — uses SP credentials)
     ↓
-TokenManager (singleton — per-user expiry check, auto-refresh, versioning)
+TokenManager (singleton — per-user expiry check, auto-refresh)
     ↓
 JWT validation (get_current_user) → email extracted from token
     ↓

@@ -65,20 +65,6 @@ class TokenManager:
         if "refresh_token" in token:
             self.kv.set_secret(f"{key}-refresh-token", token["refresh_token"])
 
-    def get_token_version(self, email: str) -> int:
-        key = email_to_key(email)
-        try:
-            return int(self.kv.get_secret(f"{key}-token-version"))
-        except Exception:
-            return 0
-
-    def increment_token_version(self, email: str) -> int:
-        """Increment version — invalidates all previously issued JWTs for this user."""
-        key = email_to_key(email)
-        new_version = self.get_token_version(email) + 1
-        self.kv.set_secret(f"{key}-token-version", str(new_version))
-        return new_version
-
 
 # Singleton — one KeyVaultClient and credential reused across all requests
 token_manager = TokenManager()

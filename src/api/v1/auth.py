@@ -71,16 +71,12 @@ def callback(request: Request):
     # Store OneDrive/Mail tokens per user in Key Vault
     token_manager.store_tokens(email, token)
 
-    # Increment version — all old JWTs for this user are now invalid
-    version = token_manager.increment_token_version(email)
-
     expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=settings.JWT_EXPIRY_HOURS)
 
     # Issue signed JWT
     bearer = jwt.encode(
         {
             "email": email,
-            "v": version,
             "exp": expires_at,
         },
         settings.JWT_SECRET,

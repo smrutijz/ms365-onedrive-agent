@@ -24,14 +24,8 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Invalid token")
 
     email = payload.get("email")
-    version = payload.get("v")
-
     if not email:
         raise HTTPException(status_code=401, detail="Invalid token payload")
-
-    # Version check — if user logged in again this token is dead
-    if version != token_manager.get_token_version(email):
-        raise HTTPException(status_code=401, detail="Token revoked — login again at /login")
 
     return email
 
