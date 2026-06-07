@@ -4,7 +4,7 @@ BASE_URL = "https://wap-ms365-onedrive-agent-g3d7azg6b4apf8cg.eastasia-01.azurew
 EMAIL = "smrutijz@outlook.com"
 
 # Paste a fresh JWT from /callback here before running
-JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNtcnV0aWp6QG91dGxvb2suY29tIiwiZXhwIjoxNzgwODQ0NjgzfQ.S7K0X70VEeFcqwotFawq26pnVkFWi3T6m_EtkFcpp1U"
+JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNtcnV0aWp6QG91dGxvb2suY29tIiwiZXhwIjoxNzgwODQ1MzYwfQ.r7rRyrvLqYfSNI84tU8JpcTjWUX6XB6cg3jzQtPbO0c"
 
 headers = {"Authorization": f"Bearer {JWT}"}
 

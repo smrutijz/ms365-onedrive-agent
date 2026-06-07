@@ -240,7 +240,7 @@ GRAPH_APP_SCOPES=User.Read Files.ReadWrite Mail.ReadWrite Mail.Send offline_acce
 | JWT expired | 1 hour has passed — get a new JWT at `/login`, or call `POST /refresh` with your current (still-valid) JWT to skip the redirect flow |
 | Refresh token expired | 90 days of complete inactivity — Microsoft requires re-auth |
 | User revoked app permissions | Microsoft invalidates all tokens |
-| Logged out (`POST /logout`) | Graph tokens deleted from Key Vault — `/drive/*`/`/mail/*` calls fail until you `/login` again |
+| Logged out (`POST /logout`) | Graph tokens invalidated in Key Vault (overwritten, not deleted, to avoid soft-delete) — `/drive/*`/`/mail/*` calls fail until you `/login` again |
 
 Logging in again issues a brand-new JWT — it doesn't invalidate JWTs issued
 by previous logins, which simply expire on their own (within an hour, by
