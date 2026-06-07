@@ -1,11 +1,12 @@
 import datetime
 import requests
 import jwt
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import RedirectResponse
 
 from src.core.config import settings
 from src.utils.token_manager import token_manager
+from src.api.deps import get_current_user
 
 router = APIRouter(tags=["Auth"])
 
@@ -74,6 +75,39 @@ def callback(request: Request):
     expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=settings.JWT_EXPIRY_HOURS)
 
     # Issue signed JWT
+    bearer = jwt.encode(
+        {
+            "email": email,
+            "exp": expires_at,
+        },
+        settings.JWT_SECRET,
+        algorithm="HS256",
+    )
+
+    return {
+        "access_token": bearer,
+        "token_type": "bearer",
+        "expires_at_utc": expires_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "user": email,
+    }
+
+
+@router.post("/refresh")
+def refresh(email: str = Depends(get_current_user)):
+    """
+    Re-issue a bearer JWT for an already-authenticated user.
+
+    Requires a currently valid Bearer JWT (see /callback). Confirms the
+    underlying Microsoft tokens are still usable, then signs a fresh JWT
+    with a renewed expiry — no need to repeat the /login redirect flow.
+    """
+    try:
+        token_manager.get_access_token(email)
+    except RuntimeError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=settings.JWT_EXPIRY_HOURS)
+
     bearer = jwt.encode(
         {
             "email": email,
