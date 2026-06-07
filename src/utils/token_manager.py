@@ -17,6 +17,11 @@ class TokenManager:
     # so it doesn't go stale mid-request to Microsoft Graph
     EXPIRY_BUFFER_SECONDS = 60
 
+    # Sentinel written over revoked tokens on logout. Key Vault rejects/no-ops
+    # empty-string secret values, so a non-empty marker is required — and it
+    # also lets us fail fast without attempting a refresh against Microsoft.
+    REVOKED_MARKER = "revoked-on-logout"
+
     def __init__(self):
         self.kv = KeyVaultClient()
         # Per-user locks so concurrent requests don't each trigger their own
@@ -64,7 +69,7 @@ class TokenManager:
         except Exception:
             raise RuntimeError("No tokens found — please login at /login")
 
-        if not refresh_token:
+        if not refresh_token or refresh_token == self.REVOKED_MARKER:
             raise RuntimeError("No tokens found — please login at /login")
 
         data = {
@@ -90,17 +95,29 @@ class TokenManager:
 
         return token["access_token"]
 
-    def revoke_tokens(self, email: str) -> None:
+    def revoke_tokens(self, email: str) -> bool:
         """
         Invalidate all stored tokens for a user — e.g. on logout.
 
-        Overwrites secret values rather than deleting them: Key Vault
-        soft-delete would otherwise make the secret names unusable for the
-        retention period, breaking the next /login for this user.
+        Overwrites secret values with REVOKED_MARKER rather than deleting
+        them: Key Vault soft-delete would otherwise make the secret names
+        unusable for the retention period, breaking the next /login for this
+        user (and Key Vault rejects/no-ops empty-string secret values, so a
+        plain "" doesn't actually take effect).
+
+        Returns False if the tokens were already revoked (e.g. a repeat
+        /logout call), True if active tokens were just revoked.
         """
         key = email_to_key(email)
+        try:
+            already_revoked = self.kv.get_secret(f"{key}-refresh-token") == self.REVOKED_MARKER
+        except Exception:
+            already_revoked = False
+
         for suffix in ("access-token", "refresh-token", "token-expiry"):
-            self.kv.set_secret(f"{key}-{suffix}", "")
+            self.kv.set_secret(f"{key}-{suffix}", self.REVOKED_MARKER)
+
+        return not already_revoked
 
     def store_tokens(self, email: str, token: dict) -> None:
         """Store OneDrive tokens for a user after initial OAuth login."""

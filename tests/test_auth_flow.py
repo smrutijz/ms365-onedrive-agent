@@ -1,6 +1,6 @@
 import requests
 
-BASE_URL = "https://wap-ms365-onedrive-agent-g3d7azg6b4apf8cg.eastasia-01.azurewebsites.net"
+BASE_URL = "http://localhost:8000"
 EMAIL = "smrutijz@outlook.com"
 
 # Paste a fresh JWT from /callback here before running

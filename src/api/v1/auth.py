@@ -177,5 +177,7 @@ def logout(email: str = Depends(get_current_user)):
     The bearer JWT itself remains valid until it expires, but subsequent
     /drive/* and /mail/* calls will fail until /login again.
     """
-    token_manager.revoke_tokens(email)
-    return {"detail": f"Logged out '{email}' — tokens revoked. Login again at /login to continue."}
+    revoked = token_manager.revoke_tokens(email)
+    if revoked:
+        return {"detail": f"Logged out '{email}' — tokens revoked. Login again at /login to continue."}
+    return {"detail": f"'{email}' is already logged out. Login again at /login to continue."}
