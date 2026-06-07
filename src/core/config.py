@@ -41,6 +41,7 @@ class _Config:
 
         # JWT
         self.JWT_SECRET = os.getenv("JWT_SECRET")
+        self.JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", "1"))
 
         missing = [k for k in self._REQUIRED if not getattr(self, k)]
         if missing:

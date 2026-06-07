@@ -9,8 +9,6 @@ from src.clients.mailHelper import MailClient
 
 security = HTTPBearer()
 
-JWT_EXPIRY_DAYS = 7
-
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),

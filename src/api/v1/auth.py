@@ -6,7 +6,6 @@ from fastapi.responses import RedirectResponse
 
 from src.core.config import settings
 from src.utils.token_manager import token_manager
-from src.api.deps import JWT_EXPIRY_DAYS
 
 router = APIRouter(tags=["Auth"])
 
@@ -75,12 +74,14 @@ def callback(request: Request):
     # Increment version — all old JWTs for this user are now invalid
     version = token_manager.increment_token_version(email)
 
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=settings.JWT_EXPIRY_HOURS)
+
     # Issue signed JWT
     bearer = jwt.encode(
         {
             "email": email,
             "v": version,
-            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=JWT_EXPIRY_DAYS),
+            "exp": expires_at,
         },
         settings.JWT_SECRET,
         algorithm="HS256",
@@ -89,6 +90,6 @@ def callback(request: Request):
     return {
         "access_token": bearer,
         "token_type": "bearer",
-        "expires_in_days": JWT_EXPIRY_DAYS,
+        "expires_at_utc": expires_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "user": email,
     }

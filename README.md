@@ -149,7 +149,7 @@ Microsoft OAuth flow completes
 {
   "access_token": "eyJ...",   ← this is the JWT
   "token_type": "bearer",
-  "expires_in_days": 7,
+  "expires_at_utc": "2026-06-07T05:30:00Z",
   "user": "you@example.com"
 }
         ↓
@@ -158,7 +158,7 @@ Authorization: Bearer eyJ...
         ↓
 API validates:
   1. Signature correct (JWT_SECRET)?
-  2. Not expired (7 days)?
+  2. Not expired (1 hour)?
   3. Version matches Key Vault — i.e. user hasn't logged in again?
 ```
 
@@ -169,7 +169,7 @@ API validates:
 
 - `email` — identifies the user; used to look up their Graph tokens in Key Vault
 - `v` — token version; increments on every new login, immediately invalidating all older JWTs
-- `exp` — expiry timestamp (7 days from issue)
+- `exp` — expiry timestamp (1 hour from issue)
 
 ### Layer 2 — Microsoft Graph tokens (OneDrive + Mail access)
 
@@ -254,7 +254,7 @@ This means you can invalidate all sessions for a user by simply logging in again
 | Reason | What happens |
 |---|---|
 | First time setup | No tokens in Key Vault yet |
-| JWT expired | 7 days have passed — get a new JWT at `/login` |
+| JWT expired | 1 hour has passed — get a new JWT at `/login` |
 | Logged in on another device | Old JWTs revoked by version increment |
 | Refresh token expired | 90 days of complete inactivity — Microsoft requires re-auth |
 | User revoked app permissions | Microsoft invalidates all tokens |
@@ -353,6 +353,7 @@ Copy `.env.example` to `.env` and fill in all values. The app will refuse to sta
 | `GRAPH_APP_SCOPES` | | Default: `User.Read Files.ReadWrite Mail.ReadWrite Mail.Send offline_access` |
 | `GRAPH_APP_TENANT` | | Default: `consumers` |
 | `GRAPH_APP_AUTHORITY_URL` | | Default: `https://login.microsoftonline.com` |
+| `JWT_EXPIRY_HOURS` | | Default: `1` — how long issued Bearer JWTs remain valid |
 
 > Generate a strong `JWT_SECRET` with: `python -c "import secrets; print(secrets.token_hex(32))"`
 
@@ -393,7 +394,7 @@ uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
    {
      "access_token": "<your-bearer-jwt>",
      "token_type": "bearer",
-     "expires_in_days": 7,
+     "expires_at_utc": "2026-06-07T05:30:00Z",
      "user": "you@example.com"
    }
 
@@ -401,7 +402,7 @@ uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
    Authorization: Bearer <your-bearer-jwt>
 
 6. Graph tokens auto-refresh silently — no further login needed
-   unless the JWT expires (7 days) or you log in again on another device.
+   unless the JWT expires (1 hour) or you log in again on another device.
    If the JWT expires, just hit /login again to get a new one.
 ```
 
