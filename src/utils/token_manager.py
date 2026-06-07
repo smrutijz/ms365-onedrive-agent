@@ -64,6 +64,9 @@ class TokenManager:
         except Exception:
             raise RuntimeError("No tokens found — please login at /login")
 
+        if not refresh_token:
+            raise RuntimeError("No tokens found — please login at /login")
+
         data = {
             "client_id": settings.GRAPH_APP_CLIENT_ID,
             "client_secret": settings.GRAPH_APP_CLIENT_SECRET,
@@ -88,10 +91,16 @@ class TokenManager:
         return token["access_token"]
 
     def revoke_tokens(self, email: str) -> None:
-        """Delete all stored tokens for a user — e.g. on logout."""
+        """
+        Invalidate all stored tokens for a user — e.g. on logout.
+
+        Overwrites secret values rather than deleting them: Key Vault
+        soft-delete would otherwise make the secret names unusable for the
+        retention period, breaking the next /login for this user.
+        """
         key = email_to_key(email)
         for suffix in ("access-token", "refresh-token", "token-expiry"):
-            self.kv.delete_secret(f"{key}-{suffix}")
+            self.kv.set_secret(f"{key}-{suffix}", "")
 
     def store_tokens(self, email: str, token: dict) -> None:
         """Store OneDrive tokens for a user after initial OAuth login."""

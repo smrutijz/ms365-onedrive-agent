@@ -172,9 +172,10 @@ def refresh(email: str = Depends(get_current_user)):
 @router.post("/logout")
 def logout(email: str = Depends(get_current_user)):
     """
-    Log out the current user — deletes their stored OneDrive/Mail tokens
-    from Key Vault. The bearer JWT itself remains valid until it expires,
-    but subsequent /drive/* and /mail/* calls will fail until /login again.
+    Log out the current user — invalidates their stored OneDrive/Mail tokens
+    in Key Vault (overwritten, not deleted, to avoid soft-delete issues).
+    The bearer JWT itself remains valid until it expires, but subsequent
+    /drive/* and /mail/* calls will fail until /login again.
     """
     token_manager.revoke_tokens(email)
     return {"detail": f"Logged out '{email}' — tokens revoked. Login again at /login to continue."}
