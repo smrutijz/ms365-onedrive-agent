@@ -237,13 +237,17 @@ GRAPH_APP_SCOPES=User.Read Files.ReadWrite Mail.ReadWrite Mail.Send offline_acce
 | Reason | What happens |
 |---|---|
 | First time setup | No tokens in Key Vault yet |
-| JWT expired | 1 hour has passed — get a new JWT at `/login` |
+| JWT expired | 1 hour has passed — get a new JWT at `/login`, or call `POST /refresh` with your current (still-valid) JWT to skip the redirect flow |
 | Refresh token expired | 90 days of complete inactivity — Microsoft requires re-auth |
 | User revoked app permissions | Microsoft invalidates all tokens |
+| Logged out (`POST /logout`) | Graph tokens deleted from Key Vault — `/drive/*`/`/mail/*` calls fail until you `/login` again |
 
 Logging in again issues a brand-new JWT — it doesn't invalidate JWTs issued
 by previous logins, which simply expire on their own (within an hour, by
-default).
+default). `POST /logout` doesn't invalidate your current JWT either (JWTs are
+stateless and self-expiring) — it only revokes the underlying Microsoft Graph
+tokens, so the JWT stops being useful for `/drive/*`/`/mail/*` calls until you
+authenticate again.
 
 ---
 
@@ -280,7 +284,7 @@ ms365-onedrive-agent/
 │   │   ├── deps.py              Shared dependencies — get_current_user,
 │   │   │                        get_graph_client, get_mail_client
 │   │   └── v1/
-│   │       ├── auth.py          /login, /callback (OAuth + JWT issuance)
+│   │       ├── auth.py          /login, /callback, /refresh, /logout
 │   │       ├── onedrive.py      All /drive/* routes + request bodies
 │   │       └── mail.py          All /mail/* routes + request bodies
 │   ├── core/
@@ -295,11 +299,13 @@ ms365-onedrive-agent/
 │       │                        all OneDrive operations
 │       └── mailHelper.py        Microsoft Graph API wrapper —
 │                                Outlook/Hotmail mail operations
+├── tests/                       Test suite (pytest)
 ├── Dockerfile
 ├── docker-compose.yml           Dev (with hot reload)
 ├── docker-compose.prod.yml      Production
 ├── requirements.txt
-└── .env
+├── .env.example                 Template — copy to .env and fill in
+└── .env                         Your local secrets (gitignored)
 ```
 
 ### Service dependency chain
@@ -387,7 +393,11 @@ uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
 6. Graph tokens auto-refresh silently — no further login needed
    unless the JWT expires (1 hour) or you log in again on another device.
-   If the JWT expires, just hit /login again to get a new one.
+   Before it expires, call POST /refresh (with your current JWT as the
+   Bearer token) to get a fresh one without the /login redirect. Once it
+   has expired, hit /login again instead.
+7. Done with a session? POST /logout revokes your stored Graph tokens —
+   /drive/* and /mail/* calls will then require logging in again.
 ```
 
 ### Swagger UI
@@ -409,6 +419,8 @@ All `/drive/*` and `/mail/*` endpoints require: `Authorization: Bearer <jwt>`
 |---|---|---|
 | `GET` | `/login` | Redirect to Microsoft OAuth login |
 | `GET` | `/callback` | OAuth callback — stores Graph tokens (OneDrive + Mail) in Key Vault, returns JWT |
+| `POST` | `/refresh` | Re-issue a fresh JWT for an already-authenticated user (requires valid Bearer JWT) |
+| `POST` | `/logout` | Revoke the user's stored Graph tokens in Key Vault (requires valid Bearer JWT) |
 
 ### Drive
 | Method | Path | Description |

@@ -1,12 +1,16 @@
 import datetime
+import logging
+import secrets
 import requests
 import jwt
 from fastapi import APIRouter, Request, HTTPException, Depends
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 
 from src.core.config import settings
 from src.utils.token_manager import token_manager
 from src.api.deps import get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Auth"])
 
@@ -14,14 +18,26 @@ router = APIRouter(tags=["Auth"])
 @router.get("/login")
 def login():
     """Redirect to Microsoft OAuth login page."""
+    state = secrets.token_urlsafe(32)
     params = {
         "client_id": settings.GRAPH_APP_CLIENT_ID,
         "response_type": "code",
         "redirect_uri": settings.GRAPH_APP_REDIRECT_URI,
         "scope": settings.GRAPH_APP_SCOPES,
+        "state": state,
     }
     query = "&".join(f"{k}={requests.utils.quote(v)}" for k, v in params.items())
-    return RedirectResponse(f"{settings.AUTH_URL}?{query}")
+
+    response = RedirectResponse(f"{settings.AUTH_URL}?{query}")
+    # Stored so /callback can verify the redirect wasn't forged (CSRF / auth-code injection protection)
+    response.set_cookie(
+        "oauth_state",
+        state,
+        max_age=600,
+        httponly=True,
+        samesite="lax",
+    )
+    return response
 
 
 @router.get("/callback")
@@ -40,6 +56,11 @@ def callback(request: Request):
     if not code:
         return {"error": "missing code"}
 
+    state = request.query_params.get("state")
+    cookie_state = request.cookies.get("oauth_state")
+    if not state or not cookie_state or not secrets.compare_digest(state, cookie_state):
+        raise HTTPException(status_code=400, detail="Invalid or missing OAuth state — possible CSRF, please try /login again")
+
     data = {
         "client_id": settings.GRAPH_APP_CLIENT_ID,
         "client_secret": settings.GRAPH_APP_CLIENT_SECRET,
@@ -49,7 +70,16 @@ def callback(request: Request):
         "scope": settings.GRAPH_APP_SCOPES,
     }
 
-    token = requests.post(settings.TOKEN_URL, data=data).json()
+    try:
+        token_resp = requests.post(settings.TOKEN_URL, data=data, timeout=10)
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Failed to reach Microsoft token endpoint: {e}")
+
+    try:
+        token = token_resp.json()
+    except ValueError:
+        raise HTTPException(status_code=502, detail="Microsoft token endpoint returned a non-JSON response")
+
     if "access_token" not in token:
         raise HTTPException(
             status_code=400,
@@ -57,11 +87,20 @@ def callback(request: Request):
         )
 
     # Pull user's email from Microsoft
-    me_resp = requests.get(
-        "https://graph.microsoft.com/v1.0/me",
-        headers={"Authorization": f"Bearer {token['access_token']}"},
-    )
-    me = me_resp.json()
+    try:
+        me_resp = requests.get(
+            "https://graph.microsoft.com/v1.0/me",
+            headers={"Authorization": f"Bearer {token['access_token']}"},
+            timeout=10,
+        )
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Failed to reach Microsoft Graph: {e}")
+
+    try:
+        me = me_resp.json()
+    except ValueError:
+        raise HTTPException(status_code=502, detail="Microsoft Graph returned a non-JSON response")
+
     email = me.get("mail") or me.get("userPrincipalName")
     if not email:
         raise HTTPException(
@@ -84,12 +123,14 @@ def callback(request: Request):
         algorithm="HS256",
     )
 
-    return {
+    response = JSONResponse({
         "access_token": bearer,
         "token_type": "bearer",
         "expires_at_utc": expires_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "user": email,
-    }
+    })
+    response.delete_cookie("oauth_state")
+    return response
 
 
 @router.post("/refresh")
@@ -105,6 +146,9 @@ def refresh(email: str = Depends(get_current_user)):
         token_manager.get_access_token(email)
     except RuntimeError as e:
         raise HTTPException(status_code=401, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to verify Microsoft tokens for '{email}' during refresh: {e}")
+        raise HTTPException(status_code=401, detail="Unable to verify Microsoft tokens — please login again at /login")
 
     expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=settings.JWT_EXPIRY_HOURS)
 
@@ -123,3 +167,14 @@ def refresh(email: str = Depends(get_current_user)):
         "expires_at_utc": expires_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "user": email,
     }
+
+
+@router.post("/logout")
+def logout(email: str = Depends(get_current_user)):
+    """
+    Log out the current user — deletes their stored OneDrive/Mail tokens
+    from Key Vault. The bearer JWT itself remains valid until it expires,
+    but subsequent /drive/* and /mail/* calls will fail until /login again.
+    """
+    token_manager.revoke_tokens(email)
+    return {"detail": f"Logged out '{email}' — tokens revoked. Login again at /login to continue."}

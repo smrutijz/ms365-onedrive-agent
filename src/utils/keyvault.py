@@ -1,3 +1,4 @@
+from azure.core.exceptions import ResourceNotFoundError
 from azure.identity import ClientSecretCredential
 from azure.keyvault.secrets import SecretClient
 from src.core.config import settings
@@ -16,3 +17,9 @@ class KeyVaultClient:
 
     def set_secret(self, name: str, value: str):
         self.client.set_secret(name, value)
+
+    def delete_secret(self, name: str):
+        try:
+            self.client.begin_delete_secret(name).wait()
+        except ResourceNotFoundError:
+            pass

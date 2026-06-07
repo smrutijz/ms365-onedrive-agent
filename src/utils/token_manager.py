@@ -1,5 +1,7 @@
 import re
 import time
+from threading import Lock
+
 import requests
 from src.utils.keyvault import KeyVaultClient
 from src.core.config import settings
@@ -11,23 +13,52 @@ def email_to_key(email: str) -> str:
 
 
 class TokenManager:
+    # Treat a token as expired this many seconds before its actual expiry,
+    # so it doesn't go stale mid-request to Microsoft Graph
+    EXPIRY_BUFFER_SECONDS = 60
+
     def __init__(self):
         self.kv = KeyVaultClient()
+        # Per-user locks so concurrent requests don't each trigger their own
+        # refresh against Microsoft (wasted calls + refresh-token rotation races)
+        self._locks: dict[str, Lock] = {}
+        self._locks_guard = Lock()
+
+    def _lock_for(self, key: str) -> Lock:
+        with self._locks_guard:
+            lock = self._locks.get(key)
+            if lock is None:
+                lock = self._locks[key] = Lock()
+            return lock
 
     def get_access_token(self, email: str) -> str:
         key = email_to_key(email)
         try:
-            expiry = self.kv.get_secret(f"{key}-token-expiry")
+            expiry = int(self.kv.get_secret(f"{key}-token-expiry"))
             access_token = self.kv.get_secret(f"{key}-access-token")
         except Exception:
             return self.refresh_access_token(email)
 
-        if int(expiry) <= time.time():
+        # Refresh a little early so the token doesn't expire mid-request
+        if expiry <= time.time() + self.EXPIRY_BUFFER_SECONDS:
             return self.refresh_access_token(email)
         return access_token
 
     def refresh_access_token(self, email: str) -> str:
         key = email_to_key(email)
+        with self._lock_for(key):
+            # Another request may have refreshed while we waited for the lock
+            try:
+                expiry = int(self.kv.get_secret(f"{key}-token-expiry"))
+                access_token = self.kv.get_secret(f"{key}-access-token")
+                if expiry > time.time() + self.EXPIRY_BUFFER_SECONDS:
+                    return access_token
+            except Exception:
+                pass
+
+            return self._do_refresh(key)
+
+    def _do_refresh(self, key: str) -> str:
         try:
             refresh_token = self.kv.get_secret(f"{key}-refresh-token")
         except Exception:
@@ -55,6 +86,12 @@ class TokenManager:
             self.kv.set_secret(f"{key}-refresh-token", token["refresh_token"])
 
         return token["access_token"]
+
+    def revoke_tokens(self, email: str) -> None:
+        """Delete all stored tokens for a user — e.g. on logout."""
+        key = email_to_key(email)
+        for suffix in ("access-token", "refresh-token", "token-expiry"):
+            self.kv.delete_secret(f"{key}-{suffix}")
 
     def store_tokens(self, email: str, token: dict) -> None:
         """Store OneDrive tokens for a user after initial OAuth login."""
