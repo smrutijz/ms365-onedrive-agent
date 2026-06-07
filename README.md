@@ -1,6 +1,6 @@
-# MS365 OneDrive Agent
+# MS365 Agent — OneDrive & Mail
 
-A FastAPI service that exposes the full native Microsoft OneDrive feature set as a REST API, with multi-user JWT authentication and secure token management via Azure Key Vault.
+A FastAPI service that exposes Microsoft OneDrive and Outlook/Hotmail mail as a REST API, with multi-user JWT authentication and secure token management via Azure Key Vault.
 
 ---
 
@@ -21,13 +21,22 @@ A FastAPI service that exposes the full native Microsoft OneDrive feature set as
 
 ## Overview
 
-This service wraps the Microsoft Graph API and exposes all core OneDrive operations over a simple REST interface:
+This service wraps the Microsoft Graph API and exposes core OneDrive and Outlook/Hotmail mail operations over a simple REST interface:
 
+**OneDrive**
 - Browse, search, and navigate files and folders
 - Upload (simple and large file resumable), download, delete
 - Create folders, rename, move, copy items
 - Manage sharing links and permissions
 - View file version history
+
+**Mail (Outlook / Hotmail)**
+- Browse mail folders and messages, search the mailbox
+- Send, reply, reply-all, and forward email
+- Mark as read/unread, move, and delete messages
+- List and fetch attachments
+
+**Shared across both**
 - Multi-user JWT auth — each user logs in once, gets a Bearer token, uses it on every request
 
 ---
@@ -39,16 +48,16 @@ This service wraps the Microsoft Graph API and exposes all core OneDrive operati
 │                          CLIENT / USER                                │
 │                                                                       │
 │  1. GET /login  →  browser OAuth flow  →  get JWT                    │
-│  2. All /drive/* requests: Authorization: Bearer <jwt>               │
+│  2. All /drive/* and /mail/* requests: Authorization: Bearer <jwt>   │
 └──────────────────────────┬───────────────────────────────────────────┘
                            │ HTTPS
                            ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │                    FastAPI Application (:8000)                        │
-│                          src/main.py                                  │
+│                src/main.py + src/api/v1/* routers                     │
 │                                                                       │
 │  ┌─────────────────────────────────────────────────────────────┐     │
-│  │  JWT Auth Layer  (every /drive/* request)                   │     │
+│  │  JWT Auth Layer  (every /drive/* and /mail/* request)       │     │
 │  │                                                              │     │
 │  │  get_current_user()                                          │     │
 │  │    → decode & verify JWT signature (JWT_SECRET)             │     │
@@ -58,28 +67,28 @@ This service wraps the Microsoft Graph API and exposes all core OneDrive operati
 │                             │ email                                   │
 │                             ▼                                         │
 │  ┌─────────────────────────────────────────────────────────────┐     │
-│  │  get_graph_client()                                          │     │
+│  │  get_graph_client() / get_mail_client()                      │     │
 │  │    → token_manager.get_access_token(email)                  │     │
-│  │    → returns GraphClient with fresh OneDrive Bearer token   │     │
+│  │    → returns a client with a fresh Graph Bearer token       │     │
 │  └──────────────────────────┬──────────────────────────────────┘     │
 └─────────────────────────────┼────────────────────────────────────────┘
                               │
               ┌───────────────┴──────────────┐
               ▼                              ▼
 ┌─────────────────────┐         ┌───────────────────────────┐
-│   Token Manager     │         │       Graph Client         │
+│   Token Manager     │         │     Graph / Mail Clients   │
 │  token_manager.py   │         │   oneDriveHelper.py        │
-│                     │         │                            │
-│  Per-user secrets   │         │  All OneDrive operations   │
-│  in Key Vault:      │         │  via Microsoft Graph v1.0  │
-│  {key}-access-token │         └──────────────┬────────────┘
-│  {key}-refresh-token│                        │ Bearer token
-│  {key}-token-expiry │                        ▼
-│  {key}-token-version│         ┌───────────────────────────┐
-└──────────┬──────────┘         │   Microsoft Graph API      │
-           │                    │  graph.microsoft.com/v1.0  │
-           ▼                    └───────────────────────────┘
-┌─────────────────────┐
+│                     │         │   mailHelper.py            │
+│  Per-user secrets   │         │                            │
+│  in Key Vault:      │         │  OneDrive + Mail operations│
+│  {key}-access-token │         │  via Microsoft Graph v1.0  │
+│  {key}-refresh-token│         └──────────────┬────────────┘
+│  {key}-token-expiry │                        │ Bearer token
+│  {key}-token-version│                        ▼
+└──────────┬──────────┘         ┌───────────────────────────┐
+           │                    │   Microsoft Graph API      │
+           ▼                    │  graph.microsoft.com/v1.0  │
+┌─────────────────────┐         └───────────────────────────┘
 │   Azure Key Vault   │
 │    keyvault.py      │
 └──────────┬──────────┘
@@ -109,7 +118,7 @@ The service uses two separate Azure AD app registrations with distinct responsib
 │                                                                      │
 │   Purpose:                         Purpose:                          │
 │   Authenticate to Key Vault        Act on behalf of the user         │
-│   Read / write secrets             Access user's OneDrive files      │
+│   Read / write secrets             Access user's OneDrive & mailbox  │
 │                                    Delegated permission scope        │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
@@ -117,7 +126,7 @@ The service uses two separate Azure AD app registrations with distinct responsib
 
 | | Service Principal | Graph Delegated |
 |---|---|---|
-| Accesses | Azure Key Vault | Microsoft Graph / OneDrive |
+| Accesses | Azure Key Vault | Microsoft Graph / OneDrive / Mail |
 | User consent | Not required | Required once (via `/login`) |
 | Config vars | `SP_APP_CLIENT_*` | `GRAPH_APP_CLIENT_*` |
 
@@ -158,13 +167,13 @@ API validates:
 { "email": "you@example.com", "v": 3, "exp": 1781342229 }
 ```
 
-- `email` — identifies the user; used to look up their OneDrive tokens in Key Vault
+- `email` — identifies the user; used to look up their Graph tokens in Key Vault
 - `v` — token version; increments on every new login, immediately invalidating all older JWTs
 - `exp` — expiry timestamp (7 days from issue)
 
-### Layer 2 — OneDrive tokens (Microsoft Graph access)
+### Layer 2 — Microsoft Graph tokens (OneDrive + Mail access)
 
-These are tokens the API holds on your behalf. You never see them.
+These are tokens the API holds on your behalf. You never see them. The same delegated Graph token is used for both `/drive/*` and `/mail/*` calls — there's only one token pair per user, scoped to cover Files and Mail permissions together.
 
 ```
 Stored in Azure Key Vault per user:
@@ -181,10 +190,10 @@ Stored in Azure Key Vault per user:
 
 ## Token Lifecycle
 
-### What happens on every /drive/* request
+### What happens on every /drive/* or /mail/* request
 
 ```
-Incoming request: GET /drive/root
+Incoming request: GET /drive/root  (or GET /mail/messages)
 Authorization: Bearer <jwt>
             ↓
 ── JWT Validation ──────────────────────────────────────
@@ -193,7 +202,7 @@ Authorization: Bearer <jwt>
   Look up {email-key}-token-version in Key Vault
   JWT v == KV version? → pass
             ↓
-── OneDrive Token Fetch ────────────────────────────────
+── Graph Token Fetch ───────────────────────────────────
   Read {email-key}-token-expiry from Key Vault
             ↓
      Is current time > expiry?
@@ -209,7 +218,7 @@ Authorization: Bearer <jwt>
   saved to Key Vault
        ↓
 ── Graph API Call ──────────────────────────────────────
-  GraphClient calls graph.microsoft.com/v1.0
+  GraphClient / MailClient calls graph.microsoft.com/v1.0
   with fresh Bearer access_token
             ↓
   Response returned to caller ✅
@@ -218,8 +227,8 @@ Authorization: Bearer <jwt>
 ### Why offline_access scope matters
 
 ```
-GRAPH_APP_SCOPES=Files.ReadWrite offline_access
-                                  ↑
+GRAPH_APP_SCOPES=User.Read Files.ReadWrite Mail.ReadWrite Mail.Send offline_access
+                                                                     ↑
                     This scope instructs Microsoft to issue
                     a refresh_token alongside the access_token.
                     Without it, the access_token expires in ~1 hour
@@ -259,7 +268,7 @@ Multiple users can use the same deployed API instance independently. Each user:
 1. Visits `/login` and signs in with their own Microsoft account
 2. Gets their own JWT
 3. Has their own set of secrets in Key Vault under their email prefix
-4. Can only access their own OneDrive — the JWT and Key Vault secrets are tied to their email
+4. Can only access their own OneDrive and mailbox — the JWT and Key Vault secrets are tied to their email
 
 ```
 Key Vault secrets layout (example — two users):
@@ -282,7 +291,14 @@ alice-contoso-com-token-version
 ```
 ms365-onedrive-agent/
 ├── src/
-│   ├── main.py                  FastAPI app — all REST endpoints + JWT auth
+│   ├── main.py                  FastAPI app — creates the app, includes routers
+│   ├── api/
+│   │   ├── deps.py              Shared dependencies — get_current_user,
+│   │   │                        get_graph_client, get_mail_client
+│   │   └── v1/
+│   │       ├── auth.py          /login, /callback (OAuth + JWT issuance)
+│   │       ├── onedrive.py      All /drive/* routes + request bodies
+│   │       └── mail.py          All /mail/* routes + request bodies
 │   ├── core/
 │   │   └── config.py            Thread-safe singleton config; validates
 │   │                            required env vars at startup
@@ -291,8 +307,10 @@ ms365-onedrive-agent/
 │   │   └── token_manager.py     Per-user token lifecycle — expiry check,
 │   │                            auto-refresh, versioning, singleton
 │   └── clients/
-│       └── oneDriveHelper.py    Microsoft Graph API wrapper —
-│                                all OneDrive operations
+│       ├── oneDriveHelper.py    Microsoft Graph API wrapper —
+│       │                        all OneDrive operations
+│       └── mailHelper.py        Microsoft Graph API wrapper —
+│                                Outlook/Hotmail mail operations
 ├── Dockerfile
 ├── docker-compose.yml           Dev (with hot reload)
 ├── docker-compose.prod.yml      Production
@@ -311,7 +329,7 @@ TokenManager (singleton — per-user expiry check, auto-refresh, versioning)
     ↓
 JWT validation (get_current_user) → email extracted from token
     ↓
-GraphClient (per-request — uses fresh OneDrive access token)
+GraphClient / MailClient (per-request — uses fresh Graph access token)
     ↓
 Microsoft Graph API
 ```
@@ -332,7 +350,7 @@ Copy `.env.example` to `.env` and fill in all values. The app will refuse to sta
 | `GRAPH_APP_CLIENT_SECRET` | ✅ | Graph app client secret |
 | `JWT_SECRET` | ✅ | Secret key used to sign and verify Bearer JWTs |
 | `GRAPH_APP_REDIRECT_URI` | | Default: `http://localhost:8000/callback` |
-| `GRAPH_APP_SCOPES` | | Default: `Files.ReadWrite offline_access` |
+| `GRAPH_APP_SCOPES` | | Default: `User.Read Files.ReadWrite Mail.ReadWrite Mail.Send offline_access` |
 | `GRAPH_APP_TENANT` | | Default: `consumers` |
 | `GRAPH_APP_AUTHORITY_URL` | | Default: `https://login.microsoftonline.com` |
 
@@ -369,8 +387,8 @@ uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 1. Open http://localhost:8000/login in a browser
 2. Sign in with your Microsoft account
 3. Grant the requested permissions
-4. You are redirected to /callback — OneDrive tokens are stored in Key Vault
-   and a signed JWT is returned:
+4. You are redirected to /callback — Graph tokens (covering both OneDrive
+   and Mail) are stored in Key Vault and a signed JWT is returned:
 
    {
      "access_token": "<your-bearer-jwt>",
@@ -379,10 +397,10 @@ uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
      "user": "you@example.com"
    }
 
-5. Copy the access_token value. Use it on every /drive/* request:
+5. Copy the access_token value. Use it on every /drive/* and /mail/* request:
    Authorization: Bearer <your-bearer-jwt>
 
-6. OneDrive tokens auto-refresh silently — no further login needed
+6. Graph tokens auto-refresh silently — no further login needed
    unless the JWT expires (7 days) or you log in again on another device.
    If the JWT expires, just hit /login again to get a new one.
 ```
@@ -399,13 +417,13 @@ Click **Authorize** (top right), paste just `<your-jwt>` (no `Bearer ` prefix �
 
 ## API Endpoints
 
-All `/drive/*` endpoints require: `Authorization: Bearer <jwt>`
+All `/drive/*` and `/mail/*` endpoints require: `Authorization: Bearer <jwt>`
 
 ### Auth
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/login` | Redirect to Microsoft OAuth login |
-| `GET` | `/callback` | OAuth callback — stores OneDrive tokens in Key Vault, returns JWT |
+| `GET` | `/callback` | OAuth callback — stores Graph tokens (OneDrive + Mail) in Key Vault, returns JWT |
 
 ### Drive
 | Method | Path | Description |
@@ -469,3 +487,39 @@ All `/drive/*` endpoints require: `Authorization: Bearer <jwt>`
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/drive/items/{item_id}/versions` | List version history of a file |
+
+---
+
+### Mail Folders
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/mail/folders` | List mail folders (Inbox, Sent Items, Drafts, etc.) |
+| `GET` | `/mail/folders/{folder_id}/messages` | List messages in a specific folder |
+
+### Mail Messages
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/mail/messages` | List messages across the mailbox |
+| `GET` | `/mail/messages/{message_id}` | Get full metadata and body for a message |
+| `PATCH` | `/mail/messages/{message_id}` | Update message properties (e.g. mark read/unread) |
+| `DELETE` | `/mail/messages/{message_id}` | Permanently delete a message |
+| `PATCH` | `/mail/messages/{message_id}/move` | Move a message to a different folder |
+
+### Mail Search
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/mail/search?q=` | Search messages by keyword |
+
+### Mail Send
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/mail/send` | Compose and send a new email |
+| `POST` | `/mail/messages/{message_id}/reply` | Reply to the sender of a message |
+| `POST` | `/mail/messages/{message_id}/reply-all` | Reply to all recipients of a message |
+| `POST` | `/mail/messages/{message_id}/forward` | Forward a message to new recipients |
+
+### Mail Attachments
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/mail/messages/{message_id}/attachments` | List attachments on a message |
+| `GET` | `/mail/messages/{message_id}/attachments/{attachment_id}` | Get a single attachment (incl. base64 content) |

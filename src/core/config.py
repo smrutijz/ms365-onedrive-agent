@@ -36,7 +36,7 @@ class _Config:
         self.GRAPH_APP_CLIENT_SECRET = os.getenv("GRAPH_APP_CLIENT_SECRET")
         self.GRAPH_APP_TENANT = os.getenv("GRAPH_APP_TENANT", "consumers")
         self.GRAPH_APP_AUTHORITY_URL = os.getenv("GRAPH_APP_AUTHORITY_URL", "https://login.microsoftonline.com")
-        self.GRAPH_APP_SCOPES = os.getenv("GRAPH_APP_SCOPES", "User.Read Files.ReadWrite offline_access")
+        self.GRAPH_APP_SCOPES = os.getenv("GRAPH_APP_SCOPES", "User.Read Files.ReadWrite Mail.ReadWrite Mail.Send offline_access")
         self.GRAPH_APP_REDIRECT_URI = os.getenv("GRAPH_APP_REDIRECT_URI", "http://localhost:8000/callback")
 
         # JWT
