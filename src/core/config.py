@@ -1,4 +1,5 @@
 import os
+from typing import List
 from dotenv import load_dotenv, find_dotenv
 from threading import Lock
 
@@ -42,6 +43,12 @@ class _Config:
         # JWT
         self.JWT_SECRET = os.getenv("JWT_SECRET")
         self.JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", "1"))
+
+        # Domain-scoped mail access
+        raw = os.getenv("MAIL_ALLOWED_DOMAINS", "")
+        self.MAIL_ALLOWED_DOMAINS: List[str] = [
+            d.strip().lower().lstrip("@") for d in raw.split(",") if d.strip()
+        ]
 
         missing = [k for k in self._REQUIRED if not getattr(self, k)]
         if missing:

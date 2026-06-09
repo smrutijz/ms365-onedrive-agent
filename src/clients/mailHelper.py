@@ -229,3 +229,83 @@ class MailClient:
         except requests.RequestException as e:
             logger.error(f"Failed to get attachment '{attachment_id}': {e}")
             return {}
+
+
+class DomainScopedMailClient(MailClient):
+    """MailClient restricted to messages whose sender domain is in allowed_domains.
+
+    List operations filter out non-matching senders.
+    Single-message operations (get, update, delete, move, reply, forward,
+    attachments) raise PermissionError when the sender domain is not allowed.
+    """
+
+    def __init__(self, access_token: str, allowed_domains: List[str], timeout: int = 30):
+        super().__init__(access_token, timeout)
+        self.allowed_domains = [d.lower().lstrip("@") for d in allowed_domains]
+
+    def _sender_allowed(self, message: Dict[str, Any]) -> bool:
+        address = message.get("from", {}).get("emailAddress", {}).get("address", "")
+        if "@" not in address:
+            return False
+        domain = address.split("@", 1)[1].lower()
+        return domain in self.allowed_domains
+
+    def _check_message_domain(self, message_id: str) -> None:
+        msg = super().get_message(message_id)
+        if msg and not self._sender_allowed(msg):
+            raise PermissionError(
+                f"Access denied — sender domain is not in the allowed list: {self.allowed_domains}"
+            )
+
+    # ── Filtered list operations ───────────────────────────────────────────────
+
+    def list_messages(self, top: int = 25) -> List[Dict[str, Any]]:
+        return [m for m in super().list_messages(top) if self._sender_allowed(m)]
+
+    def list_folder_messages(self, folder_id: str, top: int = 25) -> List[Dict[str, Any]]:
+        return [m for m in super().list_folder_messages(folder_id, top) if self._sender_allowed(m)]
+
+    def search_messages(self, query: str, top: int = 25) -> List[Dict[str, Any]]:
+        return [m for m in super().search_messages(query, top) if self._sender_allowed(m)]
+
+    # ── Domain-gated single-message operations ─────────────────────────────────
+
+    def get_message(self, message_id: str) -> Dict[str, Any]:
+        msg = super().get_message(message_id)
+        if msg and not self._sender_allowed(msg):
+            raise PermissionError(
+                f"Access denied — sender domain is not in the allowed list: {self.allowed_domains}"
+            )
+        return msg
+
+    def update_message(self, message_id: str, fields: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        self._check_message_domain(message_id)
+        return super().update_message(message_id, fields)
+
+    def delete_message(self, message_id: str) -> bool:
+        self._check_message_domain(message_id)
+        return super().delete_message(message_id)
+
+    def move_message(self, message_id: str, destination_folder_id: str) -> Optional[Dict[str, Any]]:
+        self._check_message_domain(message_id)
+        return super().move_message(message_id, destination_folder_id)
+
+    def reply_to_message(self, message_id: str, comment: str) -> bool:
+        self._check_message_domain(message_id)
+        return super().reply_to_message(message_id, comment)
+
+    def reply_all_to_message(self, message_id: str, comment: str) -> bool:
+        self._check_message_domain(message_id)
+        return super().reply_all_to_message(message_id, comment)
+
+    def forward_message(self, message_id: str, to: List[str], comment: str = "") -> bool:
+        self._check_message_domain(message_id)
+        return super().forward_message(message_id, to, comment)
+
+    def list_attachments(self, message_id: str) -> List[Dict[str, Any]]:
+        self._check_message_domain(message_id)
+        return super().list_attachments(message_id)
+
+    def get_attachment(self, message_id: str, attachment_id: str) -> Dict[str, Any]:
+        self._check_message_domain(message_id)
+        return super().get_attachment(message_id, attachment_id)

@@ -7,30 +7,30 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from src.core.config import settings
 from src.utils.token_manager import token_manager
 from src.clients.oneDriveHelper import GraphClient
-from src.clients.mailHelper import MailClient
+from src.clients.mailHelper import MailClient, DomainScopedMailClient
 
 logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
 
 
-def get_current_user(
+def _decode_jwt(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-) -> str:
-    """Validate Bearer JWT and return the user's email."""
+) -> dict:
+    """Decode and verify the Bearer JWT; return the full payload."""
     try:
-        payload = jwt.decode(
-            credentials.credentials, settings.JWT_SECRET, algorithms=["HS256"]
-        )
+        return jwt.decode(credentials.credentials, settings.JWT_SECRET, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired — login again at /login")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+
+def get_current_user(payload: dict = Depends(_decode_jwt)) -> str:
+    """Return the authenticated user's email from the JWT."""
     email = payload.get("email")
     if not email:
         raise HTTPException(status_code=401, detail="Invalid token payload")
-
     return email
 
 
@@ -48,5 +48,24 @@ def get_graph_client(email: str = Depends(get_current_user)) -> GraphClient:
     return GraphClient(_get_access_token_or_401(email))
 
 
-def get_mail_client(email: str = Depends(get_current_user)) -> MailClient:
-    return MailClient(_get_access_token_or_401(email))
+def get_mail_client(payload: dict = Depends(_decode_jwt)) -> MailClient:
+    """Return a MailClient scoped by the JWT's scope claim.
+
+    If the token carries Mail.ReadWrite.DomainScoped and MAIL_ALLOWED_DOMAINS
+    is configured, returns a DomainScopedMailClient that filters by sender domain.
+    """
+    email = payload.get("email")
+    if not email:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    access_token = _get_access_token_or_401(email)
+    scope = payload.get("scope", "")
+
+    if settings.MAIL_ALLOWED_DOMAINS:
+        if "Mail.ReadWrite.DomainScoped" not in scope:
+            raise HTTPException(
+                status_code=403,
+                detail="Mail access requires domain-scoped consent — please login again at /login",
+            )
+        return DomainScopedMailClient(access_token, settings.MAIL_ALLOWED_DOMAINS)
+    return MailClient(access_token)

@@ -8,7 +8,7 @@ from fastapi.responses import RedirectResponse, JSONResponse
 
 from src.core.config import settings
 from src.utils.token_manager import token_manager
-from src.api.deps import get_current_user
+from src.api.deps import get_current_user, _decode_jwt
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,18 @@ def callback(request: Request):
             detail=token.get("error_description", "Token exchange failed"),
         )
 
+    if settings.MAIL_ALLOWED_DOMAINS:
+        granted = token.get("scope", "")
+        if "Mail.ReadWrite.DomainScoped" not in granted:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Domain-scoped mail consent was not granted. "
+                    "Ensure the custom scope Mail.ReadWrite.DomainScoped is registered in Azure "
+                    "and included in GRAPH_APP_SCOPES, then login again at /login."
+                ),
+            )
+
     # Pull user's email from Microsoft
     try:
         me_resp = requests.get(
@@ -113,15 +125,12 @@ def callback(request: Request):
 
     expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=settings.JWT_EXPIRY_HOURS)
 
+    jwt_payload: dict = {"email": email, "exp": expires_at}
+    if settings.MAIL_ALLOWED_DOMAINS:
+        jwt_payload["scope"] = "Mail.ReadWrite.DomainScoped"
+
     # Issue signed JWT
-    bearer = jwt.encode(
-        {
-            "email": email,
-            "exp": expires_at,
-        },
-        settings.JWT_SECRET,
-        algorithm="HS256",
-    )
+    bearer = jwt.encode(jwt_payload, settings.JWT_SECRET, algorithm="HS256")
 
     response = JSONResponse({
         "access_token": bearer,
@@ -134,14 +143,19 @@ def callback(request: Request):
 
 
 @router.post("/refresh")
-def refresh(email: str = Depends(get_current_user)):
+def refresh(payload: dict = Depends(_decode_jwt)):
     """
     Re-issue a bearer JWT for an already-authenticated user.
 
     Requires a currently valid Bearer JWT (see /callback). Confirms the
     underlying Microsoft tokens are still usable, then signs a fresh JWT
     with a renewed expiry — no need to repeat the /login redirect flow.
+    All claims from the original JWT (email, scope) are preserved.
     """
+    email = payload.get("email")
+    if not email:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
     try:
         token_manager.get_access_token(email)
     except RuntimeError as e:
@@ -152,14 +166,11 @@ def refresh(email: str = Depends(get_current_user)):
 
     expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=settings.JWT_EXPIRY_HOURS)
 
-    bearer = jwt.encode(
-        {
-            "email": email,
-            "exp": expires_at,
-        },
-        settings.JWT_SECRET,
-        algorithm="HS256",
-    )
+    new_payload: dict = {"email": email, "exp": expires_at}
+    if "scope" in payload:
+        new_payload["scope"] = payload["scope"]
+
+    bearer = jwt.encode(new_payload, settings.JWT_SECRET, algorithm="HS256")
 
     return {
         "access_token": bearer,

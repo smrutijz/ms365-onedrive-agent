@@ -12,6 +12,7 @@ A FastAPI service that exposes Microsoft OneDrive and Outlook/Hotmail mail as a 
 - [Authentication — Two Token Layers](#authentication--two-token-layers)
 - [Token Lifecycle](#token-lifecycle)
 - [Multi-User Support](#multi-user-support)
+- [Domain-Scoped Mail Access](#domain-scoped-mail-access)
 - [Project Structure](#project-structure)
 - [Configuration](#configuration)
 - [Getting Started](#getting-started)
@@ -274,6 +275,102 @@ alice-contoso-com-token-expiry
 
 ---
 
+## Domain-Scoped Mail Access
+
+By default all `/mail/*` endpoints have full access to the user's mailbox. When domain-scoped mode is enabled, **every read and write operation is restricted to messages whose sender domain is in your approved list**.
+
+### What it does
+
+| Operation | Behaviour |
+|---|---|
+| `GET /mail/messages` | Returns only messages from allowed sender domains |
+| `GET /mail/folders/{id}/messages` | Returns only messages from allowed sender domains |
+| `GET /mail/search` | Returns only messages from allowed sender domains |
+| `GET /mail/messages/{id}` | Returns `403` if sender domain is not allowed |
+| `PATCH /mail/messages/{id}` | Returns `403` if sender domain is not allowed |
+| `DELETE /mail/messages/{id}` | Returns `403` if sender domain is not allowed |
+| `PATCH /mail/messages/{id}/move` | Returns `403` if sender domain is not allowed |
+| `POST /mail/messages/{id}/reply` | Returns `403` if sender domain is not allowed |
+| `POST /mail/messages/{id}/reply-all` | Returns `403` if sender domain is not allowed |
+| `POST /mail/messages/{id}/forward` | Returns `403` if sender domain is not allowed |
+| `GET /mail/messages/{id}/attachments` | Returns `403` if sender domain is not allowed |
+| `GET /mail/messages/{id}/attachments/{aid}` | Returns `403` if sender domain is not allowed |
+
+### Step 1 — Define the custom scope in Azure
+
+Go to **Azure Portal → Microsoft Entra ID → App registrations → your Graph app** (`GRAPH_APP_CLIENT_ID`).
+
+1. **Expose an API** → click **Set** next to Application ID URI → accept the default `api://<GRAPH_APP_CLIENT_ID>`
+2. Click **+ Add a scope** and fill in:
+
+| Field | Value |
+|---|---|
+| Scope name | `Mail.ReadWrite.DomainScoped` |
+| Who can consent | Admins and users |
+| Admin consent display name | `Domain-restricted mail access` |
+| Admin consent description | `Read and write only emails from pre-approved sender domains` |
+| User consent display name | `Domain-restricted mail access` |
+| User consent description | `Read and write only emails from pre-approved sender domains` |
+| State | Enabled |
+
+This scope name (`Mail.ReadWrite.DomainScoped`) will appear on the Microsoft consent screen when users log in, making it clear that mail access is domain-restricted.
+
+### Step 2 — Update your environment
+
+In `.env`, set the two values below:
+
+```env
+# Add the custom scope to the existing scopes list
+GRAPH_APP_SCOPES=User.Read Files.ReadWrite Mail.ReadWrite Mail.Send offline_access api://<GRAPH_APP_CLIENT_ID>/Mail.ReadWrite.DomainScoped
+
+# Comma-separated list of sender domains to allow
+MAIL_ALLOWED_DOMAINS=company.com,partner.org
+```
+
+Replace `<GRAPH_APP_CLIENT_ID>` with your actual Graph app client ID.
+
+### How it works end-to-end
+
+```
+1. User visits /login
+        ↓
+2. Microsoft consent screen shows:
+   ✓ Read and write your mail            (Mail.ReadWrite — Microsoft Graph)
+   ✓ Domain-restricted mail access       (Mail.ReadWrite.DomainScoped — your app)
+        ↓
+3. User clicks Accept
+        ↓
+4. /callback stores Graph tokens and issues a JWT that now carries:
+   { "email": "user@example.com", "scope": "Mail.ReadWrite.DomainScoped", "exp": ... }
+        ↓
+5. On every /mail/* request:
+   get_mail_client() reads the scope claim from the JWT
+   → sees Mail.ReadWrite.DomainScoped
+   → returns DomainScopedMailClient(allowed_domains=["company.com", "partner.org"])
+        ↓
+6. DomainScopedMailClient:
+   • List calls  → filters results to matching sender domains only
+   • Single-item calls → fetches message, checks sender domain,
+     raises 403 if not in allowed list, otherwise proceeds
+```
+
+### What the user sees on the consent screen
+
+When the user first logs in via `/login`, Microsoft shows a consent screen listing all requested permissions. With `MAIL_ALLOWED_DOMAINS` configured and the custom scope in `GRAPH_APP_SCOPES`, the screen will include:
+
+> **Domain-restricted mail access**
+> Read and write only emails from pre-approved sender domains
+
+The user must click **Accept** to proceed. If they decline, the OAuth flow fails and no token is issued — they cannot use the API.
+
+### Notes
+
+- `MAIL_ALLOWED_DOMAINS` is **not stored in Azure**. Azure only records that the user consented to the scope name. The actual domain list lives in your app config and can be updated without requiring users to re-consent.
+- If `MAIL_ALLOWED_DOMAINS` is not set, domain scoping is **disabled** — the standard `MailClient` with full mailbox access is used regardless of the scope claim in the JWT.
+- Domain matching is case-insensitive and matches the full sender domain (e.g. `company.com` matches `alice@company.com` but not `alice@sub.company.com`).
+
+---
+
 ## Project Structure
 
 ```
@@ -344,6 +441,7 @@ Copy `.env.example` to `.env` and fill in all values. The app will refuse to sta
 | `GRAPH_APP_TENANT` | | Default: `consumers` |
 | `GRAPH_APP_AUTHORITY_URL` | | Default: `https://login.microsoftonline.com` |
 | `JWT_EXPIRY_HOURS` | | Default: `1` — how long issued Bearer JWTs remain valid |
+| `MAIL_ALLOWED_DOMAINS` | | Comma-separated sender domains (e.g. `company.com,partner.org`). When set, all `/mail/*` endpoints are domain-filtered. See [Domain-Scoped Mail Access](#domain-scoped-mail-access). |
 
 > Generate a strong `JWT_SECRET` with: `python -c "import secrets; print(secrets.token_hex(32))"`
 
